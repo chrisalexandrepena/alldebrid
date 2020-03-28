@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "allowJs": true,
+        "skipLibCheck": true,
+        "moduleResolution": "node",
+        "pretty": true,
+        "sourceMap": true,
+        "noImplicitAny": false,
+        "noUnusedLocals": false,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "target": "es5",
+        "outDir": "./dist",
+        "baseUrl": "./src",
+        "lib": ["ES6", "dom"],
+        "strictNullChecks": true,
+        "types": ["node"]
+    },
+    "compileOnSave": true,
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules", "src/**/*.spec.ts", "src/**/*.test.ts", "src/**/*.step.ts"]
+}
