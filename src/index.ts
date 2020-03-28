@@ -8,6 +8,7 @@ export type AlldebridConfig = {
 };
 
 export class Alldebrid {
+  private TIME_BETWEEN_CALLS = 1500;
   public config: AlldebridConfig;
 
   constructor(agent: string, apiKey: string) {
@@ -29,11 +30,31 @@ export class Alldebrid {
   async uploadTorrents(options: { magnetLinks?: string[]; torrentFilePaths?: string[] }): Promise<void> {
     const { magnetLinks, torrentFilePaths } = options;
     if (magnetLinks?.length) {
-      await TorrentService.postMagnets(this.config, magnetLinks);
+      const response = await TorrentService.postMagnets(this.config, magnetLinks);
+      if ((response.status = 'success')) {
+        const errors = response.data.files.filter((file) => file.error);
+        console.log('Magnet links were uploaded successfuly');
+        if (errors.length) {
+          console.error('But the following torrents returned errors:\n');
+          console.error(errors.map((error) => error.file));
+        }
+      }
     }
     if (torrentFilePaths?.length) {
       // todo: torrent files upload
       console.error("Sorry torrent files aren't supported yet");
+    }
+  }
+
+  async deleteTorrents(torrentIds: number[]): Promise<void> {
+    for (const torrentId of torrentIds) {
+      console.log(`---- deleting torrent n°${torrentId} ----`);
+
+      const response = await TorrentService.deleteTorrent(this.config, torrentId);
+      if (response.status === 'success') console.log(`success`);
+      else console.error(`error: ${response.error.message}`);
+
+      await new Promise((resolve) => setTimeout(resolve, this.TIME_BETWEEN_CALLS));
     }
   }
 }

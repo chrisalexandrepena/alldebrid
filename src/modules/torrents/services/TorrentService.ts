@@ -3,11 +3,9 @@ import { Torrent, TorrentStatus } from '../entities/Torrent';
 import { AlldebridConfig } from '../../..';
 
 class TorrentService {
-  private ENDPOINT: string = 'magnet/status';
-
   async getTorrent({ BASE_URL, AGENT, API_KEY }: AlldebridConfig, torrentId: number): Promise<Torrent> {
     const reqOptions: request.Options = {
-      uri: `${BASE_URL}/${this.ENDPOINT}`,
+      uri: `${BASE_URL}/magnet/status`,
       method: 'GET',
       qs: Object.assign({ agent: AGENT, apikey: API_KEY, id: torrentId }),
       json: true,
@@ -43,7 +41,7 @@ class TorrentService {
     throw response.error;
   }
 
-  async postMagnets({ BASE_URL, AGENT, API_KEY }: AlldebridConfig, magnetLinks: string[]): Promise<void> {
+  postMagnets({ BASE_URL, AGENT, API_KEY }: AlldebridConfig, magnetLinks: string[]): request.RequestPromise<any> {
     const reqOptions: request.Options = {
       uri: `${BASE_URL}/magnet/upload`,
       method: 'POST',
@@ -53,6 +51,16 @@ class TorrentService {
     };
     return request(reqOptions);
   }
+
+  deleteTorrent({ BASE_URL, AGENT, API_KEY }: AlldebridConfig, torrentId: number): request.RequestPromise<any> {
+    const reqOptions: request.Options = {
+      uri: `${BASE_URL}/magnet/delete`,
+      method: 'GET',
+      qs: { agent: AGENT, apikey: API_KEY, id: torrentId },
+      json: true,
+    };
+    return request(reqOptions);
+  };
 }
 
 export default new TorrentService();
