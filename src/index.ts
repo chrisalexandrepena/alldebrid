@@ -53,7 +53,7 @@ export class Alldebrid {
       throw new Error('Please set agent and api key first');
     }
     await this.checkTimer();
-
+    
     const response = await TorrentService.getTorrentList(this.config, filters);
     this._lastCall = moment();
     return response;

@@ -1,4 +1,6 @@
 src/
+lib/bin/.tmp/
+
 tsconfig.json
 tslint.json
 .prettierrc

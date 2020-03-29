@@ -1,24 +1,12 @@
 #!/usr/bin/env node
-import commandLineArgs from 'command-line-args';
-import commandLineUsage from 'command-line-usage';
-import { Alldebrid, AlldebridConfig } from '..';
-import { existsSync, readFileSync, fstat, writeFileSync, mkdirSync } from 'fs';
+
+import { CommandParser, ParsedCommand, AvailableObjects, AvailableActions, AvailableOptions } from './modules/commandParsing/CommandParser';
+import { Alldebrid } from '..';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
-enum possibleCommands {
-  upload = 'upload',
-  get = 'get',
-  set = 'set',
-  reset = 'reset'
-}
-enum possibleObjects {
-  torrent = 'torrent',
-  torrents = 'torrents',
-  config= 'config'
-}
-
 const configPath = join(__dirname, '.tmp/config.json');
-function saveConfig(creds: AlldebridConfig) {
+function saveConfig(creds: { AGENT?: string; API_KEY?: string }) {
   if (!existsSync(join(__dirname, '.tmp'))) mkdirSync(join(__dirname, '.tmp'));
   const { AGENT, API_KEY } = creds;
   writeFileSync(configPath, JSON.stringify({ agent: AGENT, apikey: API_KEY }));
@@ -30,40 +18,73 @@ if (existsSync(configPath)) {
   if (apikey) process.env.ALLDEBRID_APIKEY = apikey;
 }
 const alldebrid = new Alldebrid(process.env.ALLDEBRID_AGENT, process.env.ALLDEBRID_APIKEY);
+const { action, object, options }: ParsedCommand = CommandParser.parseCommand();
 
-const commandOptions = commandLineArgs([
-  { name: 'command', defaultOption: true, multiple: true, group: ['main'] },
-  { name: 'verbose', alias: 'v', type: Boolean, defaultValue: false },
-  { name: 'magnetlink', alias: 'm', group: ['magnet', 'get'] },
-  { name: 'agent', alias: 'a', group: ['config'] },
-  { name: 'apikey', alias: 'k', group: ['config'] },
-]);
+(async () => {
+  switch (object) {
+    /**
+     *
+     * =========== CONFIG ===========
+     *
+     */
 
-const command = commandOptions.main.command;
-if (command) {
-  switch (command[0]) {
-    case possibleCommands.get: {
-      if (command[1]) {
-        switch (command[1]) {
-          case 'config': {
-            console.log(alldebrid.config);
-            break;
-          }
+    case AvailableObjects.config: {
+      switch (action) {
+        // get
+        case AvailableActions.get: {
+          console.log(alldebrid.config);
+          break;
+        }
+        // set
+        case AvailableActions.set: {
+          const agent: AvailableOptions = options ? options[AvailableOptions.agent] : undefined;
+          const apikey: AvailableOptions = options ? options[AvailableOptions.apikey] : undefined;
+
+          alldebrid.setConfig(agent, apikey);
+          saveConfig(alldebrid.config);
+          break;
+        }
+        // reset
+        case AvailableActions.reset: {
+          saveConfig({ AGENT: undefined, API_KEY: undefined });
+          break;
         }
       }
       break;
     }
-    case possibleCommands.set: {
-      if (command[1]) {
-        switch (command[1]) {
-          case 'config': {
-            const { agent, apikey } = commandOptions.config;
-            alldebrid.setConfig(agent, apikey);
-            saveConfig(alldebrid.config);
-            break;
-          }
+
+    /**
+     *
+     * =========== TORRENTS ===========
+     *
+     */
+    case AvailableObjects.torrents: {
+      switch (action) {
+        case AvailableActions.get: {
+          const response = options
+            ? await alldebrid.getTorrentList({ regex: options[AvailableOptions.regex], status: options[AvailableOptions.status] })
+            : await alldebrid.getTorrentList();
+          console.log(response);
+          break;
         }
       }
+      break;
+    }
+
+    /**
+     *
+     * =========== TORRENT ===========
+     *
+     */
+    case AvailableObjects.torrent: {
+      switch (action) {
+        case AvailableActions.get: {
+          if (!options || !options[AvailableOptions.id]) console.error('You must specify a torrent id');
+          else console.log(await alldebrid.getTorrent(options[AvailableOptions.id]));
+          break;
+        }
+      }
+      break;
     }
   }
-}
+})();
