@@ -17,7 +17,7 @@
     "postversion": "git push && git push --tags"
   },
   "bin": {
-    "alldebrid": "lib/bin.js"
+    "alldebrid": "lib/bin/index.js"
   },
   "keywords": [
     "alldebrid"
