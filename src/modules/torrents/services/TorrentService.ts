@@ -44,9 +44,8 @@ class TorrentService {
   postMagnets({ BASE_URL, AGENT, API_KEY }: AlldebridConfig, magnetLinks: string[]): request.RequestPromise<any> {
     const reqOptions: request.Options = {
       uri: `${BASE_URL}/magnet/upload`,
-      method: 'POST',
-      qs: { agent: AGENT, apikey: API_KEY },
-      body: { magnets: magnetLinks },
+      method: 'GET',
+      qs: { agent: AGENT, apikey: API_KEY, magnets: magnetLinks },
       json: true,
     };
     return request(reqOptions);

@@ -1,6 +1,7 @@
 import TorrentService from './modules/torrents/services/TorrentService';
 import { Torrent, TorrentStatus } from './modules/torrents/entities/Torrent';
 import moment from 'moment';
+import { Magnet, FailedMagnetUpload } from './modules/torrents/entities/Magnet';
 
 export type AlldebridConfig = {
   BASE_URL: string;
@@ -27,7 +28,7 @@ export class Alldebrid {
     if (diff < this._timeBetweenCalls) await new Promise((resolve) => setTimeout(resolve, diff));
     return;
   }
-  
+
   public get config() {
     return this._config;
   }
@@ -53,51 +54,32 @@ export class Alldebrid {
       throw new Error('Please set agent and api key first');
     }
     await this.checkTimer();
-    
+
     const response = await TorrentService.getTorrentList(this.config, filters);
     this._lastCall = moment();
     return response;
   }
 
-  async uploadMagnet(magnetLink: string): Promise<void> {
+  async uploadMagnets(magnetLinks: string[]): Promise<{ magnets: Magnet[]; errors: FailedMagnetUpload[] }> {
     if (!(this.config.AGENT && this.config.API_KEY)) {
       throw new Error('Please set agent and api key first');
     }
     await this.checkTimer();
 
-    const response = await TorrentService.postMagnets(this.config, [magnetLink]);
+    const response = await TorrentService.postMagnets(this.config, magnetLinks);
     this._lastCall = moment();
 
-    if (response.data.magnets[0].error) {
-      console.error(response.data.magnets[0].error.message);
+    if (response.status === 'success') {
+      return response.data.magnets.reduce(
+        (accumulator, current) => {
+          if (current.error) accumulator.errors.push({ magnet: current.magnet, error: current.error.message });
+          else accumulator.magnets.push(current);
+          return accumulator;
+        },
+        { magnets: [], errors: [] }
+      );
     } else {
-      console.log('Torrent was uploaded successfuly');
-    }
-  }
-
-  async uploadTorrents(options: { magnetLinks?: string[]; torrentFilePaths?: string[] }): Promise<void> {
-    if (!(this.config.AGENT && this.config.API_KEY)) {
-      throw new Error('Please set agent and api key first');
-    }
-    await this.checkTimer();
-
-    const { magnetLinks, torrentFilePaths } = options;
-    if (magnetLinks?.length) {
-      const response = await TorrentService.postMagnets(this.config, magnetLinks);
-      this._lastCall = moment();
-
-      if (response.status === 'success') {
-        const errors = response.data.files.filter((file) => file.error);
-        console.log('Magnet links were uploaded successfuly');
-        if (errors.length) {
-          console.error('But the following torrents returned errors:\n');
-          console.error(errors.map((error) => error.file));
-        }
-      }
-    }
-    if (torrentFilePaths?.length) {
-      // todo: torrent files upload
-      console.error("Sorry torrent files aren't supported yet");
+      return { magnets: [], errors: [response.error.message] };
     }
   }
 
@@ -115,6 +97,7 @@ export class Alldebrid {
 
       if (response.status === 'success') console.log(`success`);
       else console.error(`error: ${response.error.message}`);
+      console.log('----------');
 
       await this.checkTimer();
     }

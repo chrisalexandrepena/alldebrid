@@ -60,11 +60,21 @@ const { action, object, options }: ParsedCommand = CommandParser.parseCommand();
      */
     case AvailableObjects.torrents: {
       switch (action) {
+        // get
         case AvailableActions.get: {
           const response = options
             ? await alldebrid.getTorrentList({ regex: options[AvailableOptions.regex], status: options[AvailableOptions.status] })
             : await alldebrid.getTorrentList();
           console.log(response);
+          break;
+        }
+
+        // delete
+        case AvailableActions.delete: {
+          if (!options || !options[AvailableOptions.id]) console.error('You must specify at least one torrent id');
+          else {
+            await alldebrid.deleteTorrents(options[AvailableOptions.id]);
+          }
           break;
         }
       }
@@ -78,9 +88,62 @@ const { action, object, options }: ParsedCommand = CommandParser.parseCommand();
      */
     case AvailableObjects.torrent: {
       switch (action) {
+        // get
         case AvailableActions.get: {
           if (!options || !options[AvailableOptions.id]) console.error('You must specify a torrent id');
-          else console.log(await alldebrid.getTorrent(options[AvailableOptions.id]));
+          else if (options[AvailableOptions.id].length > 1) console.error('You can only specify one id');
+          else console.log(await alldebrid.getTorrent(options[AvailableOptions.id][0]));
+          break;
+        }
+
+        // delete
+        case AvailableActions.delete: {
+          if (!options || !options[AvailableOptions.id]) console.error('You must specify a torrent id');
+          else if (options[AvailableOptions.id].length > 1) console.error('You can only specify one id');
+          else {
+            await alldebrid.deleteTorrents(options[AvailableOptions.id]);
+          }
+          break;
+        }
+      }
+      break;
+    }
+
+    /**
+     *
+     * =========== MAGNET ===========
+     *
+     */
+    case AvailableObjects.magnet: {
+      switch (action) {
+        // upload
+        case AvailableActions.upload: {
+          if (!options || !options[AvailableOptions.magnetlinks]) console.error('You must specify at least one magnet link');
+          else if (options[AvailableOptions.magnetlinks].length > 1) console.error('You can only specify one magnet link');
+          else {
+            const response = await alldebrid.uploadMagnets(options[AvailableOptions.magnetlinks]);
+            console.log(response);
+          }
+          break;
+        }
+      }
+      break;
+    }
+
+    /**
+     *
+     * =========== MAGNETS ===========
+     *
+     */
+    case AvailableObjects.magnets: {
+      switch (action) {
+        // upload
+        case AvailableActions.upload: {
+          if (!options || !options[AvailableOptions.magnetlinks]) console.error('You must specify at least one magnet link');
+          else {
+            const response = await alldebrid.uploadMagnets(options[AvailableOptions.magnetlinks]);
+            console.log(response);
+          }
           break;
         }
       }
