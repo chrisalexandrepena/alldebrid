@@ -3,12 +3,18 @@
   "version": "1.0.0",
   "description": "Alldebrid ci",
   "repository": "git://github.com:chrisalexandrepena/alldebrid.git",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
-    "build": "rm -r lib && tsc --build ./tsconfig.json",
+    "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "tslint -p tsconfig.json",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint",
+    "preversion": "npm run lint",
+    "version": "npm run format && git add -A src",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postversion": "git push && git push --tags"
   },
   "keywords": [
     "alldebrid"
