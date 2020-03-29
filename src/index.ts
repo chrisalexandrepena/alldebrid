@@ -49,7 +49,7 @@ export class Alldebrid {
       const response = await TorrentService.postMagnets(this.config, magnetLinks);
       this.lastCall = moment();
 
-      if ((response.status = 'success')) {
+      if (response.status === 'success') {
         const errors = response.data.files.filter((file) => file.error);
         console.log('Magnet links were uploaded successfuly');
         if (errors.length) {

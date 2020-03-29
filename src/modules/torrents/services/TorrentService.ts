@@ -12,7 +12,7 @@ class TorrentService {
     };
     const response = await request(reqOptions);
 
-    if ((response.status = 'success')) {
+    if (response.status === 'success') {
       const magnet: Torrent = response.data.magnets;
       return magnet;
     }
@@ -28,7 +28,7 @@ class TorrentService {
     };
     const response = await request(reqOptions);
 
-    if (response.status == 'success') {
+    if (response.status === 'success') {
       const torrents: Torrent[] = response.data.magnets;
       return filters
         ? torrents.filter((torrent) => {
@@ -60,7 +60,7 @@ class TorrentService {
       json: true,
     };
     return request(reqOptions);
-  };
+  }
 }
 
 export default new TorrentService();

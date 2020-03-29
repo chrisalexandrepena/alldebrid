@@ -5,12 +5,15 @@
   "repository": "git://github.com:chrisalexandrepena/alldebrid.git",
   "main": "index.js",
   "scripts": {
-    "build": "tsc --build ./tsconfig.json",
+    "build": "rm -r lib && tsc --build ./tsconfig.json",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "tslint -p tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "alldebrid"
   ],
+  "files": ["lib/**/*"],
   "author": "Chris-Alexandre Pena",
   "license": "ISC",
   "devDependencies": {
@@ -18,7 +21,8 @@
     "@types/request": "^2.48.4",
     "@types/request-promise-native": "^1.0.17",
     "prettier": "^2.0.2",
-    "ts-lint": "^4.5.1",
+    "tslint": "^6.1.0",
+    "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.8.3"
   },
   "dependencies": {

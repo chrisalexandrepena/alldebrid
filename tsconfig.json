@@ -14,7 +14,7 @@
         "resolveJsonModule": true,
         "esModuleInterop": true,
         "target": "es5",
-        "outDir": "./dist",
+        "outDir": "./lib",
         "baseUrl": "./src",
         "lib": ["ES6", "dom"],
         "strictNullChecks": true,
