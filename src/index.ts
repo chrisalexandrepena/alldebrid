@@ -42,6 +42,18 @@ export class Alldebrid {
     return response;
   }
 
+  async uploadMagnet(magnetLink: string): Promise<void> {
+    await this.checkTimer();
+    const response = await TorrentService.postMagnets(this.config, [magnetLink]);
+    this.lastCall = moment();
+
+    if (response.data.magnets[0].error) {
+      console.error(response.data.magnets[0].error.message);
+    } else {
+      console.log('Torrent was uploaded successfuly');
+    }
+  }
+
   async uploadTorrents(options: { magnetLinks?: string[]; torrentFilePaths?: string[] }): Promise<void> {
     await this.checkTimer();
     const { magnetLinks, torrentFilePaths } = options;
