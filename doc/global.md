@@ -56,6 +56,6 @@ alldebrid delete torrents --id 123456 789101
 ### Uploading magnet links
 You can upload magnet links using
 ```sh
-alldebrid upload magnet -l $magnet1
-alldebrid upload magnets -l $magnet1 $magnet2
+alldebrid upload magnet -l $magnetLink1
+alldebrid upload magnets -l $magnetLink1 $magnetLink2
 ```
