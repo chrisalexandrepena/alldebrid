@@ -1,14 +1,17 @@
 {
   "name": "alldebrid",
   "version": "1.0.0",
-  "description": "",
+  "description": "Alldebrid ci",
+  "repository": "git://github.com:chrisalexandrepena/alldebrid.git",
   "main": "index.js",
   "scripts": {
     "build": "tsc --build ./tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "alldebrid"
+  ],
+  "author": "Chris-Alexandre Pena",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^13.9.5",
@@ -22,7 +25,6 @@
     "jsdom": "^16.2.1",
     "moment": "^2.24.0",
     "request": "^2.88.2",
-    "request-promise-native": "^1.0.8",
-    "string-similarity": "^4.0.1"
+    "request-promise-native": "^1.0.8"
   }
 }
