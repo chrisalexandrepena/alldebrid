@@ -43,6 +43,7 @@ alldebrid.getTorrentList({regex, status}).then(torrents=>...)
   - 'Removed from hoster website'
   - 'Upload fail'
   - 'Not downloaded in 20 min'
+
 adding no filters will just query all torrents.
 
 ### Fetching individual torrents
