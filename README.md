@@ -4,7 +4,7 @@ This library was built to interact with alldebrid, either globaly using the comm
 
 Enjoy ! :heart:
 
-## Install globally
+# `Install globally`
 
 Install the package globally using npm
 ```
@@ -16,7 +16,7 @@ Or you can just use it without installing it using the `npx` command;
 
 Check out the [package api](./doc/global.md) for global use.
 
-## Install locally
+# `Install locally`
 
 Install the package locally using npm
 ```

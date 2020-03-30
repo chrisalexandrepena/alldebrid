@@ -1,14 +1,14 @@
 # API Documentation for global use
 
-## Table of contents
+# `Table of contents`
 
 - [Config](#config)
 - [Torrents](#torrents)
 - [Magnets](#magnets)
 - [Links](#links)
 
-## Config
-### Setting the config
+# `Config`
+## Setting the config
 Before using the ci you need to add your [previously generated](https://alldebrid.com/apikeys/) API credentials:
 - An app `agent`
 - An app `api key`
@@ -16,15 +16,15 @@ Before using the ci you need to add your [previously generated](https://alldebri
 alldebrid set config -a agent -k apikey
 ```
 
-### Getting and resetting the config
+## Getting and resetting the config
 At any time you can display or reset the current config:
 ```sh
 alldebrid get config
 alldebrid reset config
 ```
 
-## Torrents
-### Fetching available torrent links
+# `Torrents`
+## Fetching available torrent links
 You can fetch available torrent links using
 ```sh
 alldebrid get torrents
@@ -40,31 +40,31 @@ this command may take two flags:
 
 adding no flags will just query all torrents.
 
-### Fetching individual torrents
+## Fetching individual torrents
 If you know the id of the torrent you want to fetch you may use it to query its status:
 ```sh
 alldebrid get torrent --id 123456
 ```
 
-### Deleting torrents
+## Deleting torrents
 If you know the id of the torrents you want to delete you may use them:
 ```sh
 alldebrid delete torrent --id 123456
 alldebrid delete torrents --id 123456 789101
 ```
 
-## Magnets
+# `Magnets`
 
-### Uploading magnet links
+## Uploading magnet links
 You can upload magnet links using
 ```sh
 alldebrid upload magnet -l $magnetLink1
 alldebrid upload magnets -l $magnetLink1 $magnetLink2
 ```
 
-## Links
+# `Links`
 
-### Unlocking links
+## Unlocking links
 You can unlock links from compatible websites using
 ```sh
 alldebrid debrid link -l $link -p $password
