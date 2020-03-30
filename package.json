@@ -1,6 +1,6 @@
 {
   "name": "alldebrid",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Alldebrid ci",
   "repository": "git://github.com:chrisalexandrepena/alldebrid.git",
   "main": "lib/index.js",
