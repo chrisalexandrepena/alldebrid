@@ -1,5 +1,5 @@
 import commandLineArgs from 'command-line-args';
-import { TorrentStatus } from '../../../modules/torrents/entities/Torrent';
+import { TorrentStatus } from '../../modules/torrents/entities/Torrent';
 
 export type ParsedCommand = {
   action?: AvailableActions;
@@ -38,31 +38,38 @@ export enum AvailableOptions {
 }
 
 type CommandTree = { [action: string]: { [object: string]: string[] } };
-const commandTree: CommandTree = {
-  [AvailableActions.get]: {
-    [AvailableObjects.config]: [],
-    [AvailableObjects.torrent]: ['id'],
-    [AvailableObjects.torrents]: ['regex', 'status'],
-  },
-  [AvailableActions.set]: {
-    [AvailableObjects.config]: [AvailableOptions.agent, AvailableOptions.apikey],
-  },
-  [AvailableActions.reset]: {
-    [AvailableObjects.config]: [],
-  },
-  [AvailableActions.upload]: {
-    [AvailableObjects.magnets]: ['link'],
-    [AvailableObjects.magnet]: ['link'],
-  },
-  [AvailableActions.delete]: {
-    [AvailableObjects.torrents]: ['id'],
-    [AvailableObjects.torrent]: ['id'],
-  },
-  [AvailableActions.debrid]: {
-    [AvailableObjects.link]: ['link', 'password'],
-    [AvailableObjects.links]: ['link', 'password'],
-  },
-};
+let commandTree: CommandTree;
+(() => {
+  const { upload, get, set, reset, debrid } = AvailableActions;
+  const deleteAction = AvailableActions.delete;
+  const { torrent, torrents, magnet, magnets, config, link, links } = AvailableObjects;
+
+  commandTree = {
+    [get]: {
+      [config]: [],
+      [torrent]: ['id'],
+      [torrents]: ['regex', 'status'],
+    },
+    [set]: {
+      [config]: [AvailableOptions.agent, AvailableOptions.apikey],
+    },
+    [reset]: {
+      [config]: [],
+    },
+    [upload]: {
+      [magnets]: ['link'],
+      [magnet]: ['link'],
+    },
+    [deleteAction]: {
+      [torrents]: ['id'],
+      [torrent]: ['id'],
+    },
+    [debrid]: {
+      [link]: ['link', 'password'],
+      [links]: ['link', 'password'],
+    },
+  };
+})();
 
 const parsingOptions: commandLineArgs.OptionDefinition[] = [
   { name: 'command', defaultOption: true, multiple: true, group: ['main'] },
