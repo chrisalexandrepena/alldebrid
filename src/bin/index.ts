@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { CommandParser, ParsedCommand, AvailableObjects, AvailableActions, AvailableOptions } from './modules/commandParsing/CommandParser';
-import { Alldebrid } from '..';
+import Alldebrid from '..';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 

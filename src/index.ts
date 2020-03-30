@@ -1,7 +1,10 @@
 import TorrentService from './modules/torrents/services/TorrentService';
+import LinkService from './modules/links/services/LinkService';
 import { Torrent, TorrentStatus } from './modules/torrents/entities/Torrent';
 import moment from 'moment';
-import { Magnet, FailedMagnetUpload } from './modules/torrents/entities/Magnet';
+import { Magnet } from './modules/torrents/entities/Magnet';
+import { FailedMagnetUpload } from './modules/torrents/entities/FailedMagnetUpload';
+import { Link } from './modules/links/entities/Link';
 
 export type AlldebridConfig = {
   BASE_URL: string;
@@ -9,7 +12,7 @@ export type AlldebridConfig = {
   API_KEY?: string;
 };
 
-export class Alldebrid {
+export default class Alldebrid {
   private _timeBetweenCalls = 1500;
   private _lastCall: moment.Moment;
   private _config: AlldebridConfig;
@@ -101,5 +104,30 @@ export class Alldebrid {
 
       await this.checkTimer();
     }
+  }
+
+  async debridLink(link: string, password?: string): Promise<Link> {
+    if (!(this.config.AGENT && this.config.API_KEY)) {
+      throw new Error('Please set agent and api key first');
+    }
+    await this.checkTimer();
+
+    const response = await LinkService.debridLink(this.config, link, password);
+    this._lastCall = moment();
+
+    return response;
+  }
+
+  async debridLinks(links: string[], password?: string): Promise<Link[]> {
+    if (!(this.config.AGENT && this.config.API_KEY)) {
+      throw new Error('Please set agent and api key first');
+    }
+    await this.checkTimer();
+
+    const response = await LinkService.debridLinks(this.config, links, password);
+    this._lastCall = moment();
+
+    if (response.error?.length) console.error(`The following errors have occured:\n${JSON.stringify(response.error, null, 2)}`);
+    return response.valid;
   }
 }
