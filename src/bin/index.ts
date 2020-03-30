@@ -124,10 +124,10 @@ const { action, object, options }: ParsedCommand = CommandParser.parseCommand();
         switch (action) {
           // upload
           case AvailableActions.upload: {
-            if (!options || !options[AvailableOptions.magnetlinks]) console.error('You must specify at least one magnet link');
-            else if (options[AvailableOptions.magnetlinks].length > 1) console.error('You can only specify one magnet link');
+            if (!options || !options[AvailableOptions.link]) console.error('You must specify at least one magnet link');
+            else if (options[AvailableOptions.link].length > 1) console.error('You can only specify one magnet link');
             else {
-              const response = await alldebrid.uploadMagnets(options[AvailableOptions.magnetlinks]);
+              const response = await alldebrid.uploadMagnets(options[AvailableOptions.link]);
               console.log(response);
             }
             break;
@@ -147,9 +147,54 @@ const { action, object, options }: ParsedCommand = CommandParser.parseCommand();
         switch (action) {
           // upload
           case AvailableActions.upload: {
-            if (!options || !options[AvailableOptions.magnetlinks]) console.error('You must specify at least one magnet link');
+            if (!options || !options[AvailableOptions.link]) console.error('You must specify at least one magnet link');
             else {
-              const response = await alldebrid.uploadMagnets(options[AvailableOptions.magnetlinks]);
+              const response = await alldebrid.uploadMagnets(options[AvailableOptions.link]);
+              console.log(response);
+            }
+            break;
+          }
+        }
+      break;
+    }
+
+    /**
+     *
+     * =========== LINK ===========
+     *
+     */
+    case AvailableObjects.link: {
+      if (!(alldebrid.config.AGENT && alldebrid.config.API_KEY)) console.error('Please set agent and api key first');
+      else
+        switch (action) {
+          // debrid
+          case AvailableActions.debrid: {
+            if (!options || !options[AvailableOptions.link]) console.error('You must specify at least one link');
+            else if (options[AvailableOptions.link].length > 1) console.error('You can only specify one link');
+            else {
+              const response = await alldebrid.debridLink(options[AvailableOptions.link][0], options[AvailableOptions.password]);
+              console.log(response);
+            }
+            break;
+          }
+        }
+      break;
+    }
+
+    /**
+     *
+     * =========== LINKS ===========
+     *
+     */
+    case AvailableObjects.links: {
+      if (!(alldebrid.config.AGENT && alldebrid.config.API_KEY)) console.error('Please set agent and api key first');
+      else
+        switch (action) {
+          // debrid
+          case AvailableActions.debrid: {
+            if (!options || !options[AvailableOptions.link]) console.error('You must specify at least one link');
+            else {
+              const response = await alldebrid.debridLinks(options[AvailableOptions.link], options[AvailableOptions.password]);
               console.log(response);
             }
             break;

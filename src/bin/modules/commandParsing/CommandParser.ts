@@ -13,6 +13,7 @@ export enum AvailableActions {
   set = 'set',
   reset = 'reset',
   delete = 'delete',
+  debrid = 'debrid',
 }
 
 export enum AvailableObjects {
@@ -21,6 +22,8 @@ export enum AvailableObjects {
   magnet = 'magnet',
   magnets = 'magnets',
   config = 'config',
+  links = 'links',
+  link = 'link',
 }
 
 export enum AvailableOptions {
@@ -30,7 +33,8 @@ export enum AvailableOptions {
   id = 'id',
   regex = 'regex',
   status = 'status',
-  magnetlinks = 'magnetlinks',
+  link = 'link',
+  password = 'password',
 }
 
 type CommandTree = { [action: string]: { [object: string]: string[] } };
@@ -47,12 +51,16 @@ const commandTree: CommandTree = {
     [AvailableObjects.config]: [],
   },
   [AvailableActions.upload]: {
-    [AvailableObjects.magnets]: ['magnetlinks'],
-    [AvailableObjects.magnet]: ['magnetlinks'],
+    [AvailableObjects.magnets]: ['link'],
+    [AvailableObjects.magnet]: ['link'],
   },
   [AvailableActions.delete]: {
     [AvailableObjects.torrents]: ['id'],
     [AvailableObjects.torrent]: ['id'],
+  },
+  [AvailableActions.debrid]: {
+    [AvailableObjects.link]: ['link', 'password'],
+    [AvailableObjects.links]: ['link', 'password'],
   },
 };
 
@@ -62,7 +70,8 @@ const parsingOptions: commandLineArgs.OptionDefinition[] = [
   { name: 'agent', alias: 'a', group: ['config'] },
   { name: 'apikey', alias: 'k', group: ['config'] },
   { name: 'id', type: Number, multiple: true, group: ['torrent', 'torrents'] },
-  { name: 'magnetlinks', alias: 'l', multiple: true, group: ['magnet', 'magnets'] },
+  { name: 'link', alias: 'l', multiple: true, group: ['magnet', 'magnets', 'link', 'links'] },
+  { name: 'password', alias: 'p', group: ['link', 'links'] },
   {
     name: 'regex',
     type: (stringregex) => {
