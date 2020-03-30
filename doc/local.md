@@ -5,6 +5,7 @@
 - [Config](#config)
 - [Torrents](#torrents)
 - [Magnets](#magnets)
+- [Links](#Links)
 
 ## Config
 ### Setting the config
@@ -65,3 +66,13 @@ You can upload magnet links using
 ```js
 alldebrid.uploadMagnets([magnetLink1, magnetLink2])
 ```
+
+## Links
+
+### Unlocking links
+You can unlock links from compatible websites using
+```js
+alldebrid.debridLink(link, password)
+alldebrid.debridLinks([link1, link2], password)
+```
+You may specify an optional `password` (supported on uptobox / 1fichier).

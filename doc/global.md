@@ -5,6 +5,7 @@
 - [Config](#config)
 - [Torrents](#torrents)
 - [Magnets](#magnets)
+- [Links](#links)
 
 ## Config
 ### Setting the config
@@ -36,6 +37,7 @@ this command may take two flags:
   - 'Removed from hoster website'
   - 'Upload fail'
   - 'Not downloaded in 20 min'
+
 adding no flags will just query all torrents.
 
 ### Fetching individual torrents
@@ -59,3 +61,13 @@ You can upload magnet links using
 alldebrid upload magnet -l $magnetLink1
 alldebrid upload magnets -l $magnetLink1 $magnetLink2
 ```
+
+## Links
+
+### Unlocking links
+You can unlock links from compatible websites using
+```sh
+alldebrid debrid link -l $link -p $password
+alldebrid debrid links -l $link1 $link2 -p $password
+```
+You may specify a password using the optional `-p` flag (supported on uptobox / 1fichier).
