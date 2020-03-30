@@ -1,11 +1,11 @@
 import { TorrentLink } from './TorrentLink';
 
 export enum TorrentStatus {
-  'Ready' = 'Ready',
-  'Downloading' = 'Downloading',
-  'Removed from hoster website' = 'Removed from hoster website',
-  'Upload fail' = 'Upload fail',
-  'Not downloaded in 20 min' = 'Not downloaded in 20 min',
+  'ready' = 'Ready',
+  'downloading' = 'Downloading',
+  'removed' = 'Removed from hoster website',
+  'upload_failed' = 'Upload fail',
+  'download_failed' = 'Not downloaded in 20 min',
 }
 
 export class Torrent {

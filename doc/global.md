@@ -32,11 +32,11 @@ alldebrid get torrents
 this command may take two flags:
 - `--regex` which allows you to only query torrents with matching names (_ex: /torrent name/gi_)
 - `--status` which can be one of the following:
-  - 'Ready'
-  - 'Downloading'
-  - 'Removed from hoster website'
-  - 'Upload fail'
-  - 'Not downloaded in 20 min'
+  - 'ready'
+  - 'downloading'
+  - 'removed'
+  - 'upload_failed'
+  - 'download_failed'
 
 adding no flags will just query all torrents.
 

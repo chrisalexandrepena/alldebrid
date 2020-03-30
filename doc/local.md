@@ -39,11 +39,11 @@ alldebrid.getTorrentList({regex, status}).then(torrents=>...)
 ```
 - `regex` must be of type `string` and allows you to only query torrents with matching names (_ex: /torrent name/gi_)
 - `status`, an `Array` of `strings` which can be one of the following:
-  - 'Ready'
-  - 'Downloading'
-  - 'Removed from hoster website'
-  - 'Upload fail'
-  - 'Not downloaded in 20 min'
+  - 'ready'
+  - 'downloading'
+  - 'removed'
+  - 'upload_failed'
+  - 'download_failed'
 
 adding no filters will just query all torrents.
 
