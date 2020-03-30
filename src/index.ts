@@ -5,14 +5,9 @@ import moment from 'moment';
 import { Magnet } from './modules/torrents/entities/Magnet';
 import { FailedMagnetUpload } from './modules/torrents/entities/FailedMagnetUpload';
 import { Link } from './modules/links/entities/Link';
+import { AlldebridConfig } from './modules/global/entities/AlldebridConfig';
 
-export type AlldebridConfig = {
-  BASE_URL: string;
-  AGENT?: string;
-  API_KEY?: string;
-};
-
-export default class Alldebrid {
+export = class Alldebrid {
   private _timeBetweenCalls = 1500;
   private _lastCall: moment.Moment;
   private _config: AlldebridConfig;
@@ -28,7 +23,10 @@ export default class Alldebrid {
   private async checkTimer(): Promise<void> {
     if (!this._lastCall) return;
     const diff = moment().diff(this._lastCall);
-    if (diff < this._timeBetweenCalls) await new Promise((resolve) => setTimeout(resolve, diff));
+
+    if (diff < this._timeBetweenCalls) {
+      await new Promise((resolve) => setTimeout(resolve, this._timeBetweenCalls - diff));
+    }
     return;
   }
 
@@ -52,7 +50,7 @@ export default class Alldebrid {
     return response;
   }
 
-  async getTorrentList(filters?: { regex?: RegExp; status?: TorrentStatus[] }): Promise<Torrent[]> {
+  async getTorrentList(filters?: { regex?: string; status?: TorrentStatus[] }): Promise<Torrent[]> {
     if (!(this.config.AGENT && this.config.API_KEY)) {
       throw new Error('Please set agent and api key first');
     }
@@ -130,4 +128,4 @@ export default class Alldebrid {
     if (response.error?.length) console.error(`The following errors have occured:\n${JSON.stringify(response.error, null, 2)}`);
     return response.valid;
   }
-}
+};

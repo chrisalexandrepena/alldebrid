@@ -37,7 +37,7 @@ this command may take an optionnal `filter` argument:
 ```js
 alldebrid.getTorrentList({regex, status}).then(torrents=>...)
 ```
-- `regex` must be of type `RegExp` and allows you to only query torrents with matching names (_ex: /torrent name/gi_)
+- `regex` must be of type `string` and allows you to only query torrents with matching names (_ex: /torrent name/gi_)
 - `status`, an `Array` of `strings` which can be one of the following:
   - 'Ready'
   - 'Downloading'

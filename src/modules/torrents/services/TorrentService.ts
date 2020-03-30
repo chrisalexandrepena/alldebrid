@@ -1,6 +1,6 @@
 import request from 'request-promise-native';
 import { Torrent, TorrentStatus } from '../entities/Torrent';
-import { AlldebridConfig } from '../../..';
+import { AlldebridConfig } from '../../global/entities/AlldebridConfig';
 
 class TorrentService {
   async getTorrent({ BASE_URL, AGENT, API_KEY }: AlldebridConfig, torrentId: number): Promise<Torrent> {
@@ -19,7 +19,7 @@ class TorrentService {
     throw response.error;
   }
 
-  async getTorrentList({ BASE_URL, AGENT, API_KEY }: AlldebridConfig, filters?: { regex?: RegExp; status?: TorrentStatus[] }): Promise<Torrent[]> {
+  async getTorrentList({ BASE_URL, AGENT, API_KEY }: AlldebridConfig, filters?: { regex?: string; status?: TorrentStatus[] }): Promise<Torrent[]> {
     const reqOptions: request.Options = {
       uri: `${BASE_URL}/magnet/status`,
       method: 'GET',
@@ -27,12 +27,14 @@ class TorrentService {
       json: true,
     };
     const response = await request(reqOptions);
+    const regex = filters?.regex && /^\/(.+)\/([a-zA-Z]*$)/gi.test(filters.regex) ? /^\/(.+)\/([a-zA-Z]*$)/gi.exec(filters.regex) : undefined;
 
     if (response.status === 'success') {
       const torrents: Torrent[] = response.data.magnets;
       return filters
         ? torrents.filter((torrent) => {
-            const regexFilter = filters.regex ? filters.regex.test(torrent.filename) : true;
+            let regexFilter = regex ? new RegExp(regex[1], regex[2].length ? regex[2] : undefined).test(torrent.filename) : true;
+            if (!regex && filters.regex) regexFilter = new RegExp(filters.regex).test(torrent.filename);
             const statusFilter = filters.status ? filters.status.includes(torrent.status) : true;
             return regexFilter && statusFilter;
           })
@@ -62,4 +64,4 @@ class TorrentService {
   }
 }
 
-export default new TorrentService();
+export = new TorrentService();

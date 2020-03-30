@@ -1,6 +1,6 @@
 import { LinkStatus } from '../entities/LinkStatus';
 import { UnsupportedLinkStatus } from '../entities/UnsupportedLinkStatus';
-import { AlldebridConfig } from '../../../index';
+import { AlldebridConfig } from '../../global/entities/AlldebridConfig';
 import { Link } from '../entities/Link';
 import request from 'request-promise-native';
 
@@ -104,4 +104,4 @@ class LinkService {
   }
 }
 
-export default new LinkService();
+export = new LinkService();
