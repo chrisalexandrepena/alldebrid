@@ -1,0 +1,17 @@
+# deps & builds
+node_modules/
+dist/
+coverage/
+.vitest/
+
+# logs & cache
+*.log
+npm-debug.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# OS/IDE
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
