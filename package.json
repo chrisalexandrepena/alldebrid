@@ -1,7 +1,8 @@
 {
   "name": "alldebrid",
-  "version": "2.0.0",
   "type": "module",
+  "version": "2.0.0",
+  "author": "Chris-Alexandre Pena",
   "licence": "GPL-3.0",
   "description": "AllDebrid SDK + CLI in TypeScript",
   "main": "./dist/index.cjs",
@@ -16,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "pnpm build && pnpm test"
@@ -29,8 +31,14 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "volta": {
     "node": "22.18.0"
   },
@@ -41,6 +49,7 @@
     "@eslint/js": "^9.34.0",
     "@types/node": "^24.3.0",
     "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
     "globals": "^16.3.0",
     "jiti": "^2.5.1",
     "prettier": "^3.6.2",
@@ -50,7 +59,5 @@
     "vitest": "^3.2.4"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
   "packageManager": "pnpm@10.15.0"
 }
