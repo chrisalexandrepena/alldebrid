@@ -9,7 +9,7 @@ const AlldebridError = z.object({
   code: z.string(),
   message: z.string(),
 });
-type AlldebridError = z.infer<typeof AlldebridError>
+type AlldebridError = z.infer<typeof AlldebridError>;
 
 /** Error envelope according to docs. */
 export const ApiErrorEnvelope = z.object({
@@ -44,7 +44,7 @@ export type ParsedErrorEnvelope = {
 
 export function parseEnvelope<T extends z.ZodType>(
   json: unknown,
-  dataSchema: T
+  dataSchema: T,
 ): ParsedSuccessEnvelope<z.output<T>> | ParsedErrorEnvelope {
   const Union = z.discriminatedUnion("status", [
     ApiSuccessEnvelope(dataSchema),

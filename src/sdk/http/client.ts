@@ -31,7 +31,7 @@ export class AlldebridHttpClient {
 
   private addQueryParamsToUrl(
     url: URL,
-    queryParams: URLSearchParams | Record<string, unknown>
+    queryParams: URLSearchParams | Record<string, unknown>,
   ): void {
     if (queryParams instanceof URLSearchParams) {
       queryParams.forEach((value, key) => url.searchParams.set(key, value));
@@ -55,14 +55,14 @@ export class AlldebridHttpClient {
   async request<T extends z.ZodType>(
     path: string,
     dataSchema: T,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ) {
     const parsedOpts = RequestOptionsSchema.parse(options);
     const { method } = parsedOpts;
 
     if (!this.apiKey) {
       throw new Error(
-        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first."
+        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first.",
       );
     }
 
@@ -88,7 +88,7 @@ export class AlldebridHttpClient {
     if (method === "POST" && parsedOpts.json !== undefined) {
       headers.set(
         "content-type",
-        headers.get("content-type") ?? "application/json"
+        headers.get("content-type") ?? "application/json",
       );
       body = JSON.stringify(parsedOpts.json);
     }
@@ -109,15 +109,16 @@ export class AlldebridHttpClient {
     path: string,
     dataSchema: T,
     formData: FormData,
-    options: Omit<RequestOptions, "json" | "method"> = {}
+    options: Omit<RequestOptions, "json" | "method"> = {},
   ) {
-    const parsedOpts = RequestOptionsSchema.omit({ json: true, method: true }).parse(
-      options
-    );
+    const parsedOpts = RequestOptionsSchema.omit({
+      json: true,
+      method: true,
+    }).parse(options);
 
     if (!this.apiKey) {
       throw new Error(
-        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first."
+        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first.",
       );
     }
 

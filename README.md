@@ -29,9 +29,11 @@ npm i alldebrid
 then you can use it anywhere in your code
 
 ```js
-const Alldebrid = require('alldebrid');
+const Alldebrid = require("alldebrid");
 const alldebrid = new Alldebrid(apikey);
-alldebrid.getTorrentList().then(torrents => { /* ... */ });
+alldebrid.getTorrentList().then((torrents) => {
+  /* ... */
+});
 ```
 
 Check out the [package api](./doc/local.md) for local use.

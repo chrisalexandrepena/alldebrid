@@ -30,13 +30,19 @@ describe("AlldebridHttpClient", () => {
           : input instanceof URL
             ? input.toString()
             : (input as Request).url;
-      calls.push({ url, method: init?.method, headers: new Headers(init?.headers) });
+      calls.push({
+        url,
+        method: init?.method,
+        headers: new Headers(init?.headers),
+      });
       return jsonResponse({ status: "success", data: { id: 1, name: "file" } });
     });
     vi.stubGlobal("fetch", fetchMock);
 
     const Schema = z.object({ id: z.number(), name: z.string() });
-    const res = await httpClient.request("/user", Schema, { queryParams: { page: 2 } });
+    const res = await httpClient.request("/user", Schema, {
+      queryParams: { page: 2 },
+    });
 
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.data).toEqual({ id: 1, name: "file" });
@@ -49,7 +55,12 @@ describe("AlldebridHttpClient", () => {
   });
 
   it("performs POST with JSON body and parses success envelope", async () => {
-    const calls: { url: string; method?: string; headers?: Headers; body?: string }[] = [];
+    const calls: {
+      url: string;
+      method?: string;
+      headers?: Headers;
+      body?: string;
+    }[] = [];
     const fetchMock = vi.fn(async (input: any, init?: RequestInit) => {
       const url =
         typeof input === "string"
@@ -57,8 +68,14 @@ describe("AlldebridHttpClient", () => {
           : input instanceof URL
             ? input.toString()
             : (input as Request).url;
-      const bodyText = typeof init?.body === "string" ? (init!.body as string) : undefined;
-      calls.push({ url, method: init?.method, headers: new Headers(init?.headers), body: bodyText });
+      const bodyText =
+        typeof init?.body === "string" ? (init!.body as string) : undefined;
+      calls.push({
+        url,
+        method: init?.method,
+        headers: new Headers(init?.headers),
+        body: bodyText,
+      });
       return jsonResponse({ status: "success", data: { ok: true } });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -75,7 +92,9 @@ describe("AlldebridHttpClient", () => {
     expect(called.method).toBe("POST");
     expect(called.url).toContain("apikey=KEY");
     expect(called.headers?.get("content-type")).toContain("application/json");
-    expect(called.body && JSON.parse(called.body)).toEqual({ magnet: "magnet:?xt=urn:btih:..." });
+    expect(called.body && JSON.parse(called.body)).toEqual({
+      magnet: "magnet:?xt=urn:btih:...",
+    });
   });
 
   it("returns error envelope when API responds with error status envelope", async () => {
@@ -90,12 +109,16 @@ describe("AlldebridHttpClient", () => {
     const Schema = z.object({});
     const res = await httpClient.request("/user", Schema);
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toEqual({ code: "E_TOKEN", message: "Invalid token" });
+    if (!res.ok)
+      expect(res.error).toEqual({ code: "E_TOKEN", message: "Invalid token" });
   });
 
   it("rejects when response is not valid JSON", async () => {
     const fetchMock = vi.fn(async () => {
-      return new Response("Internal Server Error", { status: 500, statusText: "Internal Server Error" });
+      return new Response("Internal Server Error", {
+        status: 500,
+        statusText: "Internal Server Error",
+      });
     });
     vi.stubGlobal("fetch", fetchMock);
 
