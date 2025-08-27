@@ -10,7 +10,7 @@ Install the package globally using npm
 
 ```
 npm i -g alldebrid
-alldebrid set config -a agent -k apikey
+alldebrid set config -k <apikey>
 alldebrid get torrents
 ```
 
@@ -30,8 +30,8 @@ then you can use it anywhere in your code
 
 ```js
 const Alldebrid = require('alldebrid');
-const alldebrid = new Alldebrid(agent, apikey);
-alldebrid.getTorrentList().then(torrents=>...);
+const alldebrid = new Alldebrid(apikey);
+alldebrid.getTorrentList().then(torrents => { /* ... */ });
 ```
 
 Check out the [package api](./doc/local.md) for local use.
