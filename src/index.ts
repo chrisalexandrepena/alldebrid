@@ -1,1 +1,1 @@
-console.log("I'm the sdk");
+export * from "./sdk";

@@ -1,15 +1,17 @@
 import { z } from "zod";
 import { parseEnvelope } from "./envelope";
+import { logger } from "../logger/logger";
 
-const HttpMethodSchema = z.union([z.literal("GET"), z.literal("POST")]);
+export const DEFAULT_BASE_URL = "https://api.alldebrid.com";
+
+const HttpMethodSchema = z.enum(["GET", "POST"]);
 export type HttpMethod = z.infer<typeof HttpMethodSchema>;
 
 const ClientOptionsSchema = z.object({
   apiKey: z.string().min(1, "apiKey is required"),
-  baseUrl: z
-    .url()
-    .default("https://api.alldebrid.com/v4")
-    .transform((v) => v.replace(/\/$/, ""))
+  baseUrl: z.url().optional(),
+  logLevel: z
+    .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .optional(),
 });
 export type ClientOptions = z.infer<typeof ClientOptionsSchema>;
@@ -22,16 +24,19 @@ const RequestOptionsSchema = z.object({
     .union([z.instanceof(URLSearchParams), z.record(z.string(), z.unknown())])
     .optional(),
   json: z.unknown().optional(),
+  form: z
+    .union([z.instanceof(URLSearchParams), z.record(z.string(), z.unknown())])
+    .optional(),
 });
 export type RequestOptions = z.input<typeof RequestOptionsSchema>;
 
 export class AlldebridHttpClient {
-  private baseUrl: string = "https://api.alldebrid.com/v4";
+  private baseUrl: string = DEFAULT_BASE_URL;
   private apiKey?: string;
 
   private addQueryParamsToUrl(
     url: URL,
-    queryParams: URLSearchParams | Record<string, unknown>,
+    queryParams: URLSearchParams | Record<string, unknown>
   ): void {
     if (queryParams instanceof URLSearchParams) {
       queryParams.forEach((value, key) => url.searchParams.set(key, value));
@@ -45,7 +50,7 @@ export class AlldebridHttpClient {
   configure(opts: ClientOptions) {
     const parsed = ClientOptionsSchema.parse(opts);
     this.apiKey = parsed.apiKey;
-    this.baseUrl = parsed.baseUrl;
+    this.baseUrl = (parsed.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   }
 
   /**
@@ -55,14 +60,14 @@ export class AlldebridHttpClient {
   async request<T extends z.ZodType>(
     path: string,
     dataSchema: T,
-    options: RequestOptions = {},
+    options: RequestOptions = {}
   ) {
     const parsedOpts = RequestOptionsSchema.parse(options);
-    const { method } = parsedOpts;
+    const method = parsedOpts.method ?? "GET";
 
     if (!this.apiKey) {
       throw new Error(
-        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first.",
+        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first."
       );
     }
 
@@ -72,26 +77,54 @@ export class AlldebridHttpClient {
       .transform((v) => v.replace(/^\//, ""))
       .parse(path);
 
-    // Build URL with base + path
     const url = new URL(`${this.baseUrl}/${normalizedPath}`);
-
-    // Always include auth query parameters
-    url.searchParams.set("apikey", this.apiKey);
 
     if (parsedOpts.queryParams)
       this.addQueryParamsToUrl(url, parsedOpts.queryParams);
 
     const headers = new Headers(parsedOpts.headers);
     headers.set("accept", "application/json");
+    headers.set("Authorization", `Bearer ${this.apiKey}`);
 
     let body: BodyInit | undefined;
-    if (method === "POST" && parsedOpts.json !== undefined) {
-      headers.set(
-        "content-type",
-        headers.get("content-type") ?? "application/json",
-      );
-      body = JSON.stringify(parsedOpts.json);
+    if (method === "POST") {
+      if (parsedOpts.json !== undefined && parsedOpts.form !== undefined) {
+        throw new Error("Provide either json or form body, not both.");
+      }
+      if (parsedOpts.json !== undefined) {
+        headers.set(
+          "content-type",
+          headers.get("content-type") ?? "application/json"
+        );
+        body = JSON.stringify(parsedOpts.json);
+      } else if (parsedOpts.form !== undefined) {
+        let sp: URLSearchParams;
+        if (parsedOpts.form instanceof URLSearchParams) sp = parsedOpts.form;
+        else {
+          sp = new URLSearchParams();
+          Object.entries(parsedOpts.form).forEach(([k, v]) => {
+            if (Array.isArray(v))
+              v.forEach((vv) => sp.append(`${k}[]`, String(vv)));
+            else if (v !== undefined && v !== null) sp.append(k, String(v));
+          });
+        }
+        if (!headers.has("content-type"))
+          headers.set(
+            "content-type",
+            "application/x-www-form-urlencoded;charset=UTF-8"
+          );
+        body = sp;
+      }
     }
+
+    logger.debug(
+      {
+        method,
+        url: url.toString(),
+        body,
+      },
+      "alldebrid http request"
+    );
 
     const res = await fetch(url, {
       method,
@@ -100,8 +133,14 @@ export class AlldebridHttpClient {
       signal: parsedOpts.signal,
     });
 
+    logger.debug({ status: res.status }, "alldebrid http response");
     const json = await res.json();
-    return parseEnvelope(json as unknown, dataSchema);
+    // writeFileSync("prout.json", JSON.stringify(json))
+    const parsed = parseEnvelope(json as unknown, dataSchema);
+    if (!parsed.ok) {
+      logger.warn({ error: parsed.error, demo: parsed.demo }, "api error");
+    }
+    return parsed;
   }
 
   /** Multipart upload for the torrent file upload endpoint. */
@@ -109,7 +148,7 @@ export class AlldebridHttpClient {
     path: string,
     dataSchema: T,
     formData: FormData,
-    options: Omit<RequestOptions, "json" | "method"> = {},
+    options: Omit<RequestOptions, "json" | "method"> = {}
   ) {
     const parsedOpts = RequestOptionsSchema.omit({
       json: true,
@@ -118,7 +157,7 @@ export class AlldebridHttpClient {
 
     if (!this.apiKey) {
       throw new Error(
-        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first.",
+        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first."
       );
     }
 
@@ -128,13 +167,18 @@ export class AlldebridHttpClient {
       .transform((v) => v.replace(/^\//, ""))
       .parse(path);
     const url = new URL(`${this.baseUrl}/${normalizedPath}`);
-    url.searchParams.set("apikey", this.apiKey);
 
     if (parsedOpts.queryParams)
       this.addQueryParamsToUrl(url, parsedOpts.queryParams);
 
     const headers = new Headers(parsedOpts.headers);
     headers.set("accept", "application/json");
+    headers.set("Authorization", `Bearer ${this.apiKey}`);
+
+    logger.debug(
+      { method: "POST", url: url.toString(), formData: true },
+      "alldebrid http upload"
+    );
 
     const res = await fetch(url, {
       method: "POST",
@@ -143,10 +187,15 @@ export class AlldebridHttpClient {
       signal: parsedOpts.signal,
     });
 
+    logger.debug({ status: res.status }, "alldebrid http response");
+
     const json = await res.json();
-    return parseEnvelope(json as unknown, dataSchema);
+    const parsed = parseEnvelope(json as unknown, dataSchema);
+    if (!parsed.ok) {
+      logger.warn({ error: parsed.error, demo: parsed.demo }, "api error");
+    }
+    return parsed;
   }
 }
 
-/** Singleton instance for convenience. Configure it once before use. */
 export const httpClient = new AlldebridHttpClient();
