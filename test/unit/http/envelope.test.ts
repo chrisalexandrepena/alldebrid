@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { parseEnvelope } from "../../../src/sdk/http/envelope";
+import { parseEnvelope } from "../../../src/sdk/core/http/envelope";
 
 describe("parseEnvelope", () => {
   it("parses success envelope with boolean demo true", () => {
@@ -14,8 +14,8 @@ describe("parseEnvelope", () => {
     const r = parseEnvelope(json, Data);
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.data).toEqual({ id: 1, name: "file" });
-      expect(r.demo).toBe(true);
+      expect(r.data.data).toEqual({ id: 1, name: "file" });
+      expect(r.data.demo).toBe(true);
     }
   });
 
@@ -30,8 +30,8 @@ describe("parseEnvelope", () => {
     const r = parseEnvelope(json, Data);
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.data).toEqual({ id: 42 });
-      expect(r.demo).toBe(true);
+      expect(r.data.data).toEqual({ id: 42 });
+      expect(r.data.demo).toBe(true);
     }
   });
 
@@ -45,8 +45,8 @@ describe("parseEnvelope", () => {
     const r = parseEnvelope(json, Data);
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.data).toEqual({ ok: true });
-      expect(r.demo).toBe(false);
+      expect(r.data.data).toEqual({ ok: true });
+      expect(r.data.demo).toBe(false);
     }
   });
 
@@ -60,11 +60,12 @@ describe("parseEnvelope", () => {
     const r = parseEnvelope(json, Data);
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.error).toEqual({
-        code: "E_OOPS",
-        message: "Something went wrong",
-      });
-      expect(r.demo).toBe(false);
+      expect(r.error.type).toBe("api");
+      if (r.error.type === "api") {
+        expect(r.error.code).toBe("E_OOPS");
+        expect(r.error.message).toBe("Something went wrong");
+        expect(r.error.demo).toBe(false);
+      }
     }
   });
 
@@ -79,24 +80,34 @@ describe("parseEnvelope", () => {
     const r = parseEnvelope(json, Data);
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.error).toEqual({ code: "E_TOKEN", message: "Invalid token" });
-      expect(r.demo).toBe(true);
+      expect(r.error.type).toBe("api");
+      if (r.error.type === "api") {
+        expect(r.error.code).toBe("E_TOKEN");
+        expect(r.error.message).toBe("Invalid token");
+        expect(r.error.demo).toBe(true);
+      }
     }
   });
 
-  it("throws on invalid success payload shape (missing data)", () => {
+  it("returns validation error on invalid success payload shape (missing data)", () => {
     const Data = z.object({ id: z.number() });
     const json = { status: "success" as const };
-    expect(() => parseEnvelope(json, Data)).toThrowError(
-      "Invalid API response shape.",
-    );
+    
+    const r = parseEnvelope(json, Data);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.type).toBe("validation");
+    }
   });
 
-  it("throws on invalid error payload shape (missing error)", () => {
+  it("returns validation error on invalid error payload shape (missing error)", () => {
     const Data = z.object({});
     const json = { status: "error" as const };
-    expect(() => parseEnvelope(json, Data)).toThrowError(
-      "Invalid API response shape.",
-    );
+    
+    const r = parseEnvelope(json, Data);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.type).toBe("validation");
+    }
   });
 });
