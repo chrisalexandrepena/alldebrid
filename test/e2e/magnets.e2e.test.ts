@@ -6,6 +6,7 @@ import {
   type MagnetListedExpired,
   type MagnetListedReady,
   type MagnetReady,
+  type UploadedMagnetSuccess,
 } from "../../src/sdk/resources/magnets/types";
 import { Alldebrid } from "../../src";
 
@@ -13,7 +14,8 @@ describe("magnets e2e test", () => {
   let client: Alldebrid;
   beforeAll(() => {
     client = new Alldebrid({
-      apiKey: "staticDemoApikeyPrem",
+      apiKey: "E1ws4Mpefm2evyGrXONe",
+      // apiKey: "staticDemoApikeyPrem",
       logLevel: "debug",
     });
   });
@@ -51,6 +53,15 @@ describe("magnets e2e test", () => {
       if (!expiredMagnets[0]) throw new Error("Demo magnet list is empty");
       const response = await client.magnet.get(expiredMagnets[0].id, "expired");
       expectTypeOf(response).toEqualTypeOf<MagnetExpired>();
+    });
+  });
+
+  describe("upload magnet", () => {
+    it("Should return a uploaded magnet result", async () => {
+      const response = await client.magnet.upload(
+        "magnet:?xt=urn:btih:842783e3005495d5d1637f5364b59343c7844707&dn=ubuntu-18.04.2-live-server-amd64.iso",
+      );
+      expectTypeOf(response).toEqualTypeOf<UploadedMagnetSuccess>();
     });
   });
 });

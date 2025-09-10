@@ -183,3 +183,35 @@ export const MagnetSchema = z.discriminatedUnion("statusCode", [
   MagnetErrorSchema,
 ]);
 export type Magnet = z.infer<typeof MagnetSchema>;
+
+// UPLOAD MAGNET
+export const UploadedMagnetSuccessSchema = z.object({
+  magnet: z.string(),
+  name: z.string(),
+  id: z.int().gte(0),
+  hash: z.string(),
+  size: z.int().gte(0),
+  ready: z.boolean(),
+});
+export type UploadedMagnetSuccess = z.infer<typeof UploadedMagnetSuccessSchema>;
+
+export const UploadedMagnetErroredSchema = z.object({
+  magnet: z.string(),
+  error: z.object({
+    code: z.enum([
+      "MAGNET_NO_URI",
+      "MAGNET_INVALID_URI",
+      "MAGNET_MUST_BE_PREMIUM",
+      "MAGNET_NO_SERVER",
+      "MAGNET_TOO_MANY_ACTIVE",
+    ]),
+    message: z.string(),
+  }),
+});
+export type UploadedMagnetErrored = z.infer<typeof UploadedMagnetErroredSchema>;
+
+export const UploadedMagnetSchema = z.union([
+  UploadedMagnetSuccessSchema,
+  UploadedMagnetErroredSchema,
+]);
+export type UploadedMagnet = z.infer<typeof UploadedMagnetSchema>;

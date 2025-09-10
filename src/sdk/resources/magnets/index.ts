@@ -3,9 +3,12 @@ import { z, type ZodError } from "zod";
 import {
   MagnetSchema,
   MagnetListedSchema,
+  UploadedMagnetSchema,
   type MagnetReady,
   type MagnetExpired,
   type MagnetError,
+  type UploadedMagnetSuccess,
+  type UploadedMagnetErrored,
 } from "./types";
 import type {
   Magnet,
@@ -72,5 +75,40 @@ export class MagnetResource {
       throw r.error as ZodError;
     }
     return r.data.magnets;
+  }
+
+  async upload(
+    magnets: string,
+  ): Promise<UploadedMagnetSuccess | UploadedMagnetErrored>;
+  async upload(
+    magnets: string[],
+  ): Promise<(UploadedMagnetSuccess | UploadedMagnetErrored)[]>;
+  async upload(
+    magnets: string | string[],
+  ): Promise<
+    | (UploadedMagnetSuccess | UploadedMagnetErrored)
+    | (UploadedMagnetSuccess | UploadedMagnetErrored)[]
+  > {
+    const returnType = Array.isArray(magnets) ? "array" : "singleObject";
+    const UploadMagnetResponseData = z.object({
+      magnets: z.array(UploadedMagnetSchema),
+    });
+    magnets = Array.isArray(magnets) ? magnets : [magnets];
+    const r = await this.client.request(
+      "v4/magnet/upload",
+      UploadMagnetResponseData,
+      {
+        method: "POST",
+        form: { magnets },
+      },
+    );
+    if (!r.ok && r.errorType === "alldebrid") {
+      throw mapApiError(r.error, r.demo);
+    } else if (!r.ok && r.errorType === "parsing") {
+      throw r.error as ZodError;
+    } else if (!r.data.magnets[0]) {
+      throw new Error("Empty result");
+    }
+    return returnType === "array" ? r.data.magnets : r.data.magnets[0];
   }
 }

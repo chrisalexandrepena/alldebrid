@@ -47,12 +47,6 @@ export class AlldebridHttpClient {
     }
   }
 
-  configure(opts: ClientOptions) {
-    const parsed = ClientOptionsSchema.parse(opts);
-    this.apiKey = parsed.apiKey;
-    this.baseUrl = (parsed.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
-  }
-
   private baseRequestSetup(
     path: string,
     headers: Headers,
@@ -74,6 +68,12 @@ export class AlldebridHttpClient {
     requestHeaders.set("Authorization", `Bearer ${this.apiKey}`);
 
     return { url, headers: requestHeaders };
+  }
+
+  configure(opts: ClientOptions) {
+    const parsed = ClientOptionsSchema.parse(opts);
+    this.apiKey = parsed.apiKey;
+    this.baseUrl = (parsed.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   }
 
   /**
@@ -114,6 +114,8 @@ export class AlldebridHttpClient {
               v.forEach((vv) => sp.append(`${k}[]`, String(vv)));
             else if (v !== undefined && v !== null) sp.append(k, String(v));
           });
+          const result = sp.getAll("magnets[]");
+          console.log(result);
         }
         if (!headers.has("content-type"))
           headers.set(
@@ -147,7 +149,7 @@ export class AlldebridHttpClient {
   }
 
   /** Multipart upload for the torrent file upload endpoint. */
-  async upload<T extends z.ZodType>(
+  async uploadFile<T extends z.ZodType>(
     path: string,
     dataSchema: T,
     formData: FormData,
@@ -180,7 +182,7 @@ export class AlldebridHttpClient {
     const json = await res.json();
     const parsed = parseEnvelope(json as unknown, dataSchema);
     if (!parsed.ok) {
-      logger.warn({ error: parsed.error, demo: parsed.demo }, "api error");
+      logger.warn({ error: parsed.error }, "api error");
     }
     return parsed;
   }
