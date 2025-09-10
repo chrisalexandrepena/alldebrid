@@ -8,9 +8,9 @@ const MagnetBaseSchema = z.object({
   hash: z.string(),
   status: z.string(),
   statusCode: z.int().gte(0).lte(11),
-  type: z.string(),
-  notified: z.boolean(),
-  version: z.int().gte(1),
+  type: z.string().optional(),
+  notified: z.boolean().optional(),
+  version: z.int().gte(1).optional(),
 });
 
 // READY
@@ -56,7 +56,7 @@ const MagnetProcessingBaseSchema = MagnetBaseSchema.extend({
   uploaded: z.int().gte(0),
   seeders: z.int().gte(0),
   downloadSpeed: z.int().gte(0),
-  processingPerc: z.int().gte(0),
+  processingPerc: z.int().gte(0).optional(),
   uploadSpeed: z.int().gte(0),
 });
 
@@ -137,26 +137,31 @@ export const MagnetListedErrorSchema = MagnetBaseSchema.extend({
     z.literal(14),
     z.literal(15),
   ]),
-  size: z.literal(0).transform(() => undefined),
+  size: z
+    .int()
+    .gte(0)
+    .optional()
+    .transform(() => undefined),
   uploadDate: z
     .int()
     .transform((num) => (num === 0 ? undefined : DateTime.fromSeconds(num))),
   completionDate: z
     .int()
-    .transform((num) => (num === 0 ? undefined : DateTime.fromSeconds(num))),
+    .optional()
+    .transform((num) => (!num ? undefined : DateTime.fromSeconds(num))),
 });
-export type MagnetListedError = z.infer<typeof MagnetListedErrorSchema>
+export type MagnetListedError = z.infer<typeof MagnetListedErrorSchema>;
 export const MagnetErrorSchema = MagnetListedErrorSchema;
-export type MagnetError = z.infer<typeof MagnetErrorSchema>
+export type MagnetError = z.infer<typeof MagnetErrorSchema>;
 
 // EXPIRED
 export const MagnetListedExpiredSchema = MagnetListedErrorSchema.extend({
   statusCode: z.literal(11),
   size: z.int().gt(0),
 });
-export type MagnetListedExpired = z.infer<typeof MagnetListedExpiredSchema>
+export type MagnetListedExpired = z.infer<typeof MagnetListedExpiredSchema>;
 export const MagnetExpiredSchema = MagnetListedExpiredSchema;
-export type MagnetExpired = z.infer<typeof MagnetExpiredSchema>
+export type MagnetExpired = z.infer<typeof MagnetExpiredSchema>;
 
 // GENERAL
 export const MagnetListedSchema = z.discriminatedUnion("statusCode", [

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { parseEnvelope } from "./envelope";
-import { logger } from "../logger/logger";
+import { logger } from "../logger";
 
 export const DEFAULT_BASE_URL = "https://api.alldebrid.com";
 
@@ -36,7 +36,7 @@ export class AlldebridHttpClient {
 
   private addQueryParamsToUrl(
     url: URL,
-    queryParams: URLSearchParams | Record<string, unknown>
+    queryParams: URLSearchParams | Record<string, unknown>,
   ): void {
     if (queryParams instanceof URLSearchParams) {
       queryParams.forEach((value, key) => url.searchParams.set(key, value));
@@ -53,6 +53,29 @@ export class AlldebridHttpClient {
     this.baseUrl = (parsed.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   }
 
+  private baseRequestSetup(
+    path: string,
+    headers: Headers,
+  ): { url: URL; headers: Headers } {
+    if (!this.apiKey)
+      throw new Error(
+        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first.",
+      );
+
+    const normalizedPath = z
+      .string()
+      .min(1, "path is required")
+      .transform((v) => v.replace(/^\//, ""))
+      .parse(path);
+    const url = new URL(`${this.baseUrl}/${normalizedPath}`);
+
+    const requestHeaders = new Headers(headers);
+    requestHeaders.set("accept", "application/json");
+    requestHeaders.set("Authorization", `Bearer ${this.apiKey}`);
+
+    return { url, headers: requestHeaders };
+  }
+
   /**
    * Perform a request against the AllDebrid API and parse the standard envelope.
    * The `dataSchema` validates the `data` field when the API returns success.
@@ -60,31 +83,15 @@ export class AlldebridHttpClient {
   async request<T extends z.ZodType>(
     path: string,
     dataSchema: T,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ) {
     const parsedOpts = RequestOptionsSchema.parse(options);
     const method = parsedOpts.method ?? "GET";
+    const { url, headers } = this.baseRequestSetup(path, parsedOpts.headers);
 
-    if (!this.apiKey) {
-      throw new Error(
-        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first."
-      );
-    }
-
-    const normalizedPath = z
-      .string()
-      .min(1, "path is required")
-      .transform((v) => v.replace(/^\//, ""))
-      .parse(path);
-
-    const url = new URL(`${this.baseUrl}/${normalizedPath}`);
-
-    if (parsedOpts.queryParams)
+    if (parsedOpts.queryParams) {
       this.addQueryParamsToUrl(url, parsedOpts.queryParams);
-
-    const headers = new Headers(parsedOpts.headers);
-    headers.set("accept", "application/json");
-    headers.set("Authorization", `Bearer ${this.apiKey}`);
+    }
 
     let body: BodyInit | undefined;
     if (method === "POST") {
@@ -94,7 +101,7 @@ export class AlldebridHttpClient {
       if (parsedOpts.json !== undefined) {
         headers.set(
           "content-type",
-          headers.get("content-type") ?? "application/json"
+          headers.get("content-type") ?? "application/json",
         );
         body = JSON.stringify(parsedOpts.json);
       } else if (parsedOpts.form !== undefined) {
@@ -111,7 +118,7 @@ export class AlldebridHttpClient {
         if (!headers.has("content-type"))
           headers.set(
             "content-type",
-            "application/x-www-form-urlencoded;charset=UTF-8"
+            "application/x-www-form-urlencoded;charset=UTF-8",
           );
         body = sp;
       }
@@ -123,7 +130,7 @@ export class AlldebridHttpClient {
         url: url.toString(),
         body,
       },
-      "alldebrid http request"
+      "alldebrid http request",
     );
 
     const res = await fetch(url, {
@@ -133,14 +140,10 @@ export class AlldebridHttpClient {
       signal: parsedOpts.signal,
     });
 
-    logger.debug({ status: res.status }, "alldebrid http response");
+    logger.debug({ status: res.status }, "alldebrid http response status");
     const json = await res.json();
-    // writeFileSync("prout.json", JSON.stringify(json))
-    const parsed = parseEnvelope(json as unknown, dataSchema);
-    if (!parsed.ok) {
-      logger.warn({ error: parsed.error, demo: parsed.demo }, "api error");
-    }
-    return parsed;
+    logger.debug(json, "alldebrid http raw response");
+    return parseEnvelope(json as unknown, dataSchema);
   }
 
   /** Multipart upload for the torrent file upload endpoint. */
@@ -148,36 +151,21 @@ export class AlldebridHttpClient {
     path: string,
     dataSchema: T,
     formData: FormData,
-    options: Omit<RequestOptions, "json" | "method"> = {}
+    options: Omit<RequestOptions, "json" | "method"> = {},
   ) {
     const parsedOpts = RequestOptionsSchema.omit({
       json: true,
       method: true,
     }).parse(options);
+    const { url, headers } = this.baseRequestSetup(path, parsedOpts.headers);
 
-    if (!this.apiKey) {
-      throw new Error(
-        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first."
-      );
-    }
-
-    const normalizedPath = z
-      .string()
-      .min(1, "path is required")
-      .transform((v) => v.replace(/^\//, ""))
-      .parse(path);
-    const url = new URL(`${this.baseUrl}/${normalizedPath}`);
-
-    if (parsedOpts.queryParams)
+    if (parsedOpts.queryParams) {
       this.addQueryParamsToUrl(url, parsedOpts.queryParams);
-
-    const headers = new Headers(parsedOpts.headers);
-    headers.set("accept", "application/json");
-    headers.set("Authorization", `Bearer ${this.apiKey}`);
+    }
 
     logger.debug(
       { method: "POST", url: url.toString(), formData: true },
-      "alldebrid http upload"
+      "alldebrid http upload",
     );
 
     const res = await fetch(url, {
@@ -197,5 +185,3 @@ export class AlldebridHttpClient {
     return parsed;
   }
 }
-
-export const httpClient = new AlldebridHttpClient();

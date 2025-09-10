@@ -1,5 +1,4 @@
-import { z } from "zod";
-import { logger } from "../logger/logger";
+import { z, ZodError } from "zod";
 
 const DemoFlagSchema = z
   .union([z.literal("true"), z.boolean()])
@@ -37,15 +36,25 @@ export type ApiSuccessEnvelopeSchema<T extends z.ZodType> = {
 };
 
 export type ParsedSuccessEnvelope<T> = { ok: true; data: T; demo: boolean };
-export type ParsedErrorEnvelope = {
-  ok: false;
-  error: AlldebridErrorSchema;
-  demo: boolean;
-};
+export const ParsedErrorEnvelopeSchema = z.discriminatedUnion("errorType", [
+  z.object({
+    ok: z.literal(false),
+    errorType: z.literal("alldebrid"),
+    error: AlldebridErrorSchema,
+    demo: z.boolean(),
+  }),
+  z.object({
+    ok: z.literal(false),
+    errorType: z.literal("parsing"),
+    error: ZodError,
+    parsedResponse: z.any(),
+  }),
+]);
+export type ParsedErrorEnvelope = z.infer<typeof ParsedErrorEnvelopeSchema>;
 
 export function parseEnvelope<T extends z.ZodType>(
   json: unknown,
-  dataSchema: T
+  dataSchema: T,
 ): ParsedSuccessEnvelope<z.output<T>> | ParsedErrorEnvelope {
   const UnionSchema = z.discriminatedUnion("status", [
     ApiSuccessEnvelopeSchema(dataSchema),
@@ -53,23 +62,26 @@ export function parseEnvelope<T extends z.ZodType>(
   ]);
   const r = UnionSchema.safeParse(json);
   if (!r.success) {
-    logger.error(r.error)
-    throw new Error("Invalid API response shape.");
+    return {
+      ok: false,
+      errorType: "parsing",
+      error: r.error,
+      parsedResponse: json,
+    };
+  } else if (r.data.status === "success") {
+    const envelope = r.data as ApiSuccessEnvelopeSchema<T>;
+    return {
+      ok: true,
+      data: envelope.data,
+      demo: envelope.demo ?? false,
+    };
   } else {
-    if (r.data.status === "success") {
-      const envelope = r.data as ApiSuccessEnvelopeSchema<T>;
-      return {
-        ok: true,
-        data: envelope.data,
-        demo: envelope.demo ?? false,
-      };
-    } else {
-      const envelope = r.data as ApiErrorEnvelopeSchema;
-      return {
-        ok: false,
-        error: envelope.error,
-        demo: envelope.demo ?? false,
-      };
-    }
+    const envelope = r.data as ApiErrorEnvelopeSchema;
+    return {
+      ok: false,
+      errorType: "alldebrid",
+      error: envelope.error,
+      demo: envelope.demo ?? false,
+    };
   }
 }

@@ -1,25 +1,32 @@
-import { AlldebridHttpClient } from "./http/client";
-import type { ClientOptions } from "./http/client";
-import { logger } from "./logger/logger";
+import { AlldebridHttpClient } from "./core/http/client";
+import type { ClientOptions } from "./core/http/client";
+import { logger } from "./core/logger";
 import { MagnetResource } from "./resources/magnets";
 
-export { AlldebridHttpClient, httpClient } from "./http/client";
 export type {
   ClientOptions,
   RequestOptions,
   HttpMethod,
-} from "./http/client";
-export * from "./errors";
-export { logger } from "./logger/logger";
+} from "./core/http/client";
+export * from "./core/errors";
+export type {
+  Magnet,
+  MagnetListed,
+  MagnetListedError,
+  MagnetListedExpired,
+  MagnetListedReady,
+  MagnetFile,
+  MagnetDir,
+} from "./resources/magnets/types";
 
 export class Alldebrid {
-  readonly http: AlldebridHttpClient;
+  private readonly httpClient: AlldebridHttpClient;
   readonly magnet: MagnetResource;
 
   constructor(opts: ClientOptions) {
-    logger.level = opts.logLevel ?? "warn"
-    this.http = new AlldebridHttpClient();
-    this.http.configure(opts);
-    this.magnet = new MagnetResource(this.http);
+    logger.level = opts.logLevel ?? "warn";
+    this.httpClient = new AlldebridHttpClient();
+    this.httpClient.configure(opts);
+    this.magnet = new MagnetResource(this.httpClient);
   }
 }

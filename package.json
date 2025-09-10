@@ -18,9 +18,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "prepublishOnly": "pnpm build && pnpm test"
+    "test:unit": "vitest run test/unit",
+    "test:e2e": "vitest run test/e2e",
+    "prepublishOnly": "pnpm build && pnpm test && pnpm test:e2e"
   },
   "exports": {
     ".": {

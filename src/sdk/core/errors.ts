@@ -47,11 +47,11 @@ export class UnknownApiError extends AlldebridApiError {
 
 export function mapApiError(err: ApiError, demo = false): AlldebridApiError {
   const code = err.code.toUpperCase();
-  if (code.startsWith("AUTH")) return new AuthError(err.code, err.message, demo);
+  if (code.startsWith("AUTH"))
+    return new AuthError(err.code, err.message, demo);
   if (code.includes("RATE") || code.includes("LIMIT"))
     return new RateLimitError(err.code, err.message, demo);
   if (code.includes("NOT_FOUND") || code.includes("UNKNOWN_TORRENT"))
     return new NotFoundError(err.code, err.message, demo);
   return new UnknownApiError(err.code, err.message, demo);
 }
-

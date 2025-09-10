@@ -49,7 +49,7 @@ describe("AlldebridHttpClient", () => {
     expect(calls.length).toBe(1);
     const called = calls[0];
     expect(called.method).toBe("GET");
-    expect(called.url).toContain("apikey=KEY");
+    expect(called.headers?.get("authorization")).toBe("Bearer KEY");
     expect(called.url).toContain("page=2");
     expect(called.headers?.get("accept")).toBe("application/json");
   });
@@ -90,7 +90,7 @@ describe("AlldebridHttpClient", () => {
     expect(calls.length).toBe(1);
     const called = calls[0];
     expect(called.method).toBe("POST");
-    expect(called.url).toContain("apikey=KEY");
+    expect(called.headers?.get("authorization")).toBe("Bearer KEY");
     expect(called.headers?.get("content-type")).toContain("application/json");
     expect(called.body && JSON.parse(called.body)).toEqual({
       magnet: "magnet:?xt=urn:btih:...",
