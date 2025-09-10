@@ -1,5 +1,5 @@
 import { AlldebridHttpClient } from "../../core/http/client";
-import { z, type ZodError } from "zod";
+import { z } from "zod";
 import {
   MagnetSchema,
   MagnetListedSchema,
@@ -20,177 +20,210 @@ import type {
   MagnetListedExpired,
   MagnetListedReady,
 } from "./types";
-import { mapApiError } from "../../core/errors";
+import { 
+  type Result, 
+  type SdkError, 
+  type BatchResult, 
+  createBatchResult 
+} from "../../core/errors";
 
 export type MagnetListStatusFilters = "active" | "ready" | "expired" | "error";
 
 export class MagnetResource {
   constructor(private readonly client: AlldebridHttpClient) {}
 
-  async list(status: "active"): Promise<MagnetListedReady[]>;
-  async list(status: "ready"): Promise<MagnetListedReady[]>;
-  async list(status: "expired"): Promise<MagnetListedExpired[]>;
-  async list(status: "error"): Promise<MagnetListedError[]>;
-  async list(): Promise<MagnetListed[]>;
-  async list(status?: MagnetListStatusFilters): Promise<MagnetListed[]> {
+  async list(status: "active"): Promise<Result<MagnetListedReady[], SdkError>>;
+  async list(status: "ready"): Promise<Result<MagnetListedReady[], SdkError>>;
+  async list(status: "expired"): Promise<Result<MagnetListedExpired[], SdkError>>;
+  async list(status: "error"): Promise<Result<MagnetListedError[], SdkError>>;
+  async list(): Promise<Result<MagnetListed[], SdkError>>;
+  async list(status?: MagnetListStatusFilters): Promise<Result<MagnetListed[], SdkError>> {
     const MagnetsListedResponseDataSchema = z.object({
       magnets: z.preprocess((entry) => {
         if (Array.isArray(entry)) return entry;
         return Object.values(entry as Record<string, unknown>);
       }, z.array(MagnetListedSchema)),
     });
-    const r = await this.client.postRequest(
+    
+    const response = await this.client.postRequest(
       "v4.1/magnet/status",
       MagnetsListedResponseDataSchema,
       status
         ? {
             requestType: "postFormData",
             method: "POST",
-            formData: { status: status },
+            formData: { status },
           }
         : { requestType: "simplePost", method: "POST" },
     );
-    if (!r.ok && r.errorType === "alldebrid") {
-      throw mapApiError(r.error, r.demo);
-    } else if (!r.ok && r.errorType === "parsing") {
-      throw r.error as ZodError;
+    
+    if (!response.ok) {
+      return response;
     }
-    return r.data.magnets;
+    
+    return {
+      ok: true,
+      data: response.data.data.magnets,
+    };
   }
 
-  async get(id: number, status: "active"): Promise<MagnetReady>;
-  async get(id: number, status: "ready"): Promise<MagnetReady>;
-  async get(id: number, status: "expired"): Promise<MagnetExpired>;
-  async get(id: number, status: "error"): Promise<MagnetError>;
+  async get(id: number, status: "active"): Promise<Result<MagnetReady, SdkError>>;
+  async get(id: number, status: "ready"): Promise<Result<MagnetReady, SdkError>>;
+  async get(id: number, status: "expired"): Promise<Result<MagnetExpired, SdkError>>;
+  async get(id: number, status: "error"): Promise<Result<MagnetError, SdkError>>;
   async get(
     id: number,
-  ): Promise<Magnet | MagnetReady | MagnetError | MagnetExpired> {
+  ): Promise<Result<Magnet | MagnetReady | MagnetError | MagnetExpired, SdkError>> {
     const MagnetResponseData = z.object({
       magnets: z.preprocess(
         (val) => (Array.isArray(val) ? val[0] : val),
         MagnetSchema,
       ),
     });
-    const r = await this.client.postRequest(
+    
+    const response = await this.client.postRequest(
       "v4.1/magnet/status",
       MagnetResponseData,
       { requestType: "simplePost", method: "POST", queryParams: { id } },
     );
-    if (!r.ok && r.errorType === "alldebrid") {
-      throw mapApiError(r.error, r.demo);
-    } else if (!r.ok && r.errorType === "parsing") {
-      throw r.error as ZodError;
+    
+    if (!response.ok) {
+      return response;
     }
-    return r.data.magnets;
+    
+    return {
+      ok: true,
+      data: response.data.data.magnets,
+    };
   }
 
   async upload(
     magnets: string,
-  ): Promise<UploadedMagnetSuccess | UploadedMagnetErrored>;
+  ): Promise<Result<UploadedMagnetSuccess | UploadedMagnetErrored, SdkError>>;
   async upload(
     magnets: string[],
-  ): Promise<(UploadedMagnetSuccess | UploadedMagnetErrored)[]>;
+  ): Promise<Result<BatchResult<UploadedMagnetSuccess | UploadedMagnetErrored>, SdkError>>;
   async upload(
     magnets: string | string[],
   ): Promise<
-    | (UploadedMagnetSuccess | UploadedMagnetErrored)
-    | (UploadedMagnetSuccess | UploadedMagnetErrored)[]
+    | Result<UploadedMagnetSuccess | UploadedMagnetErrored, SdkError>
+    | Result<BatchResult<UploadedMagnetSuccess | UploadedMagnetErrored>, SdkError>
   > {
-    const returnType = Array.isArray(magnets) ? "array" : "singleObject";
+    const isArray = Array.isArray(magnets);
     const UploadMagnetResponseData = z.object({
       magnets: z.array(UploadedMagnetSchema),
     });
-    magnets = Array.isArray(magnets) ? magnets : [magnets];
-    const r = await this.client.postRequest(
+    const magnetArray = isArray ? magnets : [magnets];
+    
+    const response = await this.client.postRequest(
       "v4/magnet/upload",
       UploadMagnetResponseData,
       {
         requestType: "postFormData",
         method: "POST",
-        formData: { magnets },
+        formData: { magnets: magnetArray },
       },
     );
-    if (!r.ok && r.errorType === "alldebrid") {
-      throw mapApiError(r.error, r.demo);
-    } else if (!r.ok && r.errorType === "parsing") {
-      throw r.error as ZodError;
-    } else if (!r.data.magnets[0]) {
-      throw new Error("Empty result");
+    
+    if (!response.ok) {
+      return response;
     }
-    return returnType === "array" ? r.data.magnets : r.data.magnets[0];
+    
+    const data = response.data.data;
+    if (!data.magnets[0]) {
+      return {
+        ok: false,
+        error: {
+          type: 'configuration' as const,
+          message: 'No magnets returned from upload',
+          retryable: false,
+          timestamp: new Date(),
+        },
+      };
+    }
+    
+    if (isArray) {
+      const results = data.magnets.map((magnet) => ({
+        ok: true as const,
+        data: magnet,
+      }));
+      
+      return {
+        ok: true,
+        data: createBatchResult(results),
+      };
+    }
+    
+    return {
+      ok: true,
+      data: data.magnets[0],
+    };
   }
 
   async uploadFile(torrentFiles: {
     fileName: string;
     blob: Blob;
-  }): Promise<UploadedFileSuccess | UploadedFileErrored>;
+  }): Promise<Result<UploadedFileSuccess | UploadedFileErrored, SdkError>>;
   async uploadFile(
     torrentFiles: { fileName: string; blob: Blob }[],
-  ): Promise<(UploadedFileSuccess | UploadedFileErrored)[]>;
+  ): Promise<Result<BatchResult<UploadedFileSuccess | UploadedFileErrored>, SdkError>>;
   async uploadFile(
     torrentFiles:
       | { fileName: string; blob: Blob }
       | { fileName: string; blob: Blob }[],
   ): Promise<
-    | (UploadedFileSuccess | UploadedFileErrored)
-    | (UploadedFileSuccess | UploadedFileErrored)[]
+    | Result<UploadedFileSuccess | UploadedFileErrored, SdkError>
+    | Result<BatchResult<UploadedFileSuccess | UploadedFileErrored>, SdkError>
   > {
-    const returnType = Array.isArray(torrentFiles) ? "array" : "singleObject";
+    const isArray = Array.isArray(torrentFiles);
     const UploadTorrentFileResponseData = z.object({
       files: z.array(UploadedFileSchema),
     });
-    const sp = new FormData();
-    torrentFiles = Array.isArray(torrentFiles) ? torrentFiles : [torrentFiles];
-    torrentFiles.forEach((file, i) =>
-      sp.append(`files[${i}]`, file.blob, file.fileName),
+    
+    const formData = new FormData();
+    const filesArray = isArray ? torrentFiles : [torrentFiles];
+    filesArray.forEach((file, i) =>
+      formData.append(`files[${i}]`, file.blob, file.fileName),
     );
-    const r = await this.client.postRequest(
+    
+    const response = await this.client.postRequest(
       "v4/magnet/upload/file",
       UploadTorrentFileResponseData,
-      { method: "POST", formData: sp, requestType: "postFormData" },
+      { method: "POST", formData, requestType: "postFormData" },
     );
-    if (!r.ok && r.errorType === "alldebrid") {
-      throw mapApiError(r.error, r.demo);
-    } else if (!r.ok && r.errorType === "parsing") {
-      throw r.error as ZodError;
-    } else if (!r.data.files[0]) {
-      throw new Error("Empty result");
+    
+    if (!response.ok) {
+      return response;
     }
-    return returnType === "array" ? r.data.files : r.data.files[0];
+    
+    const data = response.data.data;
+    if (!data.files[0]) {
+      return {
+        ok: false,
+        error: {
+          type: 'configuration' as const,
+          message: 'No files returned from upload',
+          retryable: false,
+          timestamp: new Date(),
+        },
+      };
+    }
+    
+    if (isArray) {
+      const results = data.files.map((file) => ({
+        ok: true as const,
+        data: file,
+      }));
+      
+      return {
+        ok: true,
+        data: createBatchResult(results),
+      };
+    }
+    
+    return {
+      ok: true,
+      data: data.files[0],
+    };
   }
-
-  // async status(params?: {
-  //   id?: number;
-  //   status?: "active" | "ready" | "expired" | "error";
-  // }) {
-  //   const r = await this.client.request(
-  //     "v4.1/magnet/status",
-  //     MagnetStatusSchema,
-  //     {
-  //       method: "POST",
-  //       form: params ? params : {},
-  //     }
-  //   );
-  //   if (!r.ok) throw mapApiError(r.error, r.demo);
-  //   return r.data;
-  // }
-
-  // async delete(id: number) {
-  //   const r = await this.client.request("magnet/delete", MagnetDeleteSchema, {
-  //     method: "POST",
-  //     form: { id },
-  //   });
-  //   if (!r.ok) throw mapApiError(r.error, r.demo);
-  //   return r.data;
-  // }
-
-  // async restart(id: number | number[]) {
-  //   const form = Array.isArray(id) ? { ids: id } : { id };
-  //   const r = await this.client.request("magnet/restart", MagnetRestartSchema, {
-  //     method: "POST",
-  //     form,
-  //   });
-  //   if (!r.ok) throw mapApiError(r.error, r.demo);
-  //   return r.data;
-  // }
 }

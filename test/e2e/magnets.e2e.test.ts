@@ -1,4 +1,4 @@
-import { describe, it, beforeAll, expectTypeOf } from "vitest";
+import { describe, it, beforeAll, expectTypeOf, expect } from "vitest";
 import {
   type MagnetError,
   type MagnetExpired,
@@ -17,45 +17,64 @@ describe("magnets e2e test", () => {
   let client: Alldebrid;
   beforeAll(() => {
     client = new Alldebrid({
-      apiKey: "E1ws4Mpefm2evyGrXONe",
-      // apiKey: "staticDemoApikeyPrem",
+      apiKey: "staticDemoApikeyPrem",
       logLevel: "debug",
+      timeout: 30000,
+      retries: 3,
     });
   });
 
   describe("list magnets", () => {
     it("Should return all ready magnets", async () => {
       const response = await client.magnet.list("ready");
-      expectTypeOf(response).toEqualTypeOf<MagnetListedReady[]>();
+      expect(response.ok).toEqual(true);
+      expectTypeOf(response.data).toEqualTypeOf<MagnetListedReady[]>();
+      expect(response.data.length).toBeGreaterThan(0);
     });
     it("Should return all errored magnets", async () => {
       const response = await client.magnet.list("error");
+      expect(response.ok).toEqual(true);
       expectTypeOf(response).toEqualTypeOf<MagnetListedError[]>();
+      expect(response.data.length).toBeGreaterThan(0);
     });
     it("Should return all expired magnets", async () => {
       const response = await client.magnet.list("expired");
+      expect(response.ok).toEqual(true);
       expectTypeOf(response).toEqualTypeOf<MagnetListedExpired[]>();
+      expect(response.data.length).toBeGreaterThan(0);
     });
   });
 
   describe("get magnet", () => {
     it("Should return a detailed ready magnet file", async () => {
       const readyMagnets = await client.magnet.list("ready");
-      if (!readyMagnets[0]) throw new Error("Demo magnet list is empty");
-      const response = await client.magnet.get(readyMagnets[0].id, "ready");
-      expectTypeOf(response).toEqualTypeOf<MagnetReady>();
+      if (!readyMagnets.data[0]) throw new Error("Demo magnet list is empty");
+      const response = await client.magnet.get(
+        readyMagnets.data[0].id,
+        "ready",
+      );
+      expect(response.ok).toEqual(true);
+      expectTypeOf(response.data).toEqualTypeOf<MagnetReady>();
     });
     it("Should return a detailed errored magnet file", async () => {
       const erroredMagnets = await client.magnet.list("error");
-      if (!erroredMagnets[0]) throw new Error("Demo magnet list is empty");
-      const response = await client.magnet.get(erroredMagnets[0].id, "error");
-      expectTypeOf(response).toEqualTypeOf<MagnetError>();
+      if (!erroredMagnets.data[0]) throw new Error("Demo magnet list is empty");
+      const response = await client.magnet.get(
+        erroredMagnets.data[0].id,
+        "error",
+      );
+      expect(response.ok).toEqual(true);
+      expectTypeOf(response.data).toEqualTypeOf<MagnetError>();
     });
     it("Should return a detailed expired magnet file", async () => {
       const expiredMagnets = await client.magnet.list("expired");
-      if (!expiredMagnets[0]) throw new Error("Demo magnet list is empty");
-      const response = await client.magnet.get(expiredMagnets[0].id, "expired");
-      expectTypeOf(response).toEqualTypeOf<MagnetExpired>();
+      if (!expiredMagnets.data[0]) throw new Error("Demo magnet list is empty");
+      const response = await client.magnet.get(
+        expiredMagnets.data[0].id,
+        "expired",
+      );
+      expect(response.ok).toEqual(true);
+      expectTypeOf(response.data).toEqualTypeOf<MagnetExpired>();
     });
   });
 
