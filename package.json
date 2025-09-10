@@ -43,6 +43,7 @@
     "node": "22.18.0"
   },
   "dependencies": {
+    "axios": "^1.11.0",
     "luxon": "^3.7.1",
     "pino": "^9.9.0",
     "pino-pretty": "^13.1.1",

@@ -1,11 +1,16 @@
 import { z } from "zod";
-import { parseEnvelope } from "./envelope";
+import {
+  type ParsedErrorEnvelope,
+  type ParsedSuccessEnvelope,
+  parseEnvelope,
+} from "./envelope";
 import { logger } from "../logger";
+import axios, {
+  type AxiosRequestConfig,
+  type RawAxiosRequestHeaders,
+} from "axios";
 
 export const DEFAULT_BASE_URL = "https://api.alldebrid.com";
-
-const HttpMethodSchema = z.enum(["GET", "POST"]);
-export type HttpMethod = z.infer<typeof HttpMethodSchema>;
 
 const ClientOptionsSchema = z.object({
   apiKey: z.string().min(1, "apiKey is required"),
@@ -16,58 +21,75 @@ const ClientOptionsSchema = z.object({
 });
 export type ClientOptions = z.infer<typeof ClientOptionsSchema>;
 
-const RequestOptionsSchema = z.object({
-  method: HttpMethodSchema.default("GET"),
-  signal: z.any().optional(),
-  headers: z.any().optional(),
-  queryParams: z
-    .union([z.instanceof(URLSearchParams), z.record(z.string(), z.unknown())])
-    .optional(),
-  json: z.unknown().optional(),
-  form: z
-    .union([z.instanceof(URLSearchParams), z.record(z.string(), z.unknown())])
-    .optional(),
+const RequestHeadersSchema = z.record(
+  z.union([
+    z.literal("Accept"),
+    z.literal("Content-Length"),
+    z.literal("User-Agent"),
+    z.literal("Content-Encoding"),
+    z.literal("Authorization"),
+    z.string(),
+  ]),
+  z.any(),
+);
+const RequestGetOptionsSchema = z.object({
+  method: z.literal("GET"),
+  headers: RequestHeadersSchema.optional(),
+  queryParams: z.object().optional(),
 });
-export type RequestOptions = z.input<typeof RequestOptionsSchema>;
+type RequestGetOptions = z.infer<typeof RequestGetOptionsSchema>;
+const RequestPostOptionsSchema = z.object({
+  requestType: z.literal("simplePost"),
+  method: z.literal("POST"),
+  headers: RequestHeadersSchema.optional(),
+  queryParams: z.record(z.string(), z.any()).optional(),
+});
+type RequestPostOptions = z.infer<typeof RequestPostOptionsSchema>;
+const RequestPostJsonOptionsSchema = RequestPostOptionsSchema.extend({
+  requestType: z.literal("postJson"),
+  json: z.record(z.string(), z.any()),
+});
+type RequestPostJsonOptions = z.infer<typeof RequestPostJsonOptionsSchema>;
+const RequestPostFormDataOptionsSchema = RequestPostOptionsSchema.extend({
+  requestType: z.literal("postFormData"),
+  formData: z.union([z.record(z.string(), z.any()), z.instanceof(FormData)]),
+});
+type RequestPostFormDataOptions = z.infer<
+  typeof RequestPostFormDataOptionsSchema
+>;
 
 export class AlldebridHttpClient {
   private baseUrl: string = DEFAULT_BASE_URL;
   private apiKey?: string;
 
-  private addQueryParamsToUrl(
-    url: URL,
-    queryParams: URLSearchParams | Record<string, unknown>,
-  ): void {
-    if (queryParams instanceof URLSearchParams) {
-      queryParams.forEach((value, key) => url.searchParams.set(key, value));
-    } else if (queryParams && typeof queryParams === "object") {
-      Object.entries(queryParams).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-      });
-    }
-  }
-
   private baseRequestSetup(
     path: string,
-    headers: Headers,
-  ): { url: URL; headers: Headers } {
-    if (!this.apiKey)
+    headers?: RawAxiosRequestHeaders,
+  ): {
+    url: string;
+    headers: RawAxiosRequestHeaders;
+  } {
+    if (!this.apiKey) {
       throw new Error(
         "AlldebridHttpClient is not configured. Call configure({ apiKey }) first.",
       );
-
+    }
     const normalizedPath = z
       .string()
       .min(1, "path is required")
       .transform((v) => v.replace(/^\//, ""))
       .parse(path);
     const url = new URL(`${this.baseUrl}/${normalizedPath}`);
-
-    const requestHeaders = new Headers(headers);
-    requestHeaders.set("accept", "application/json");
-    requestHeaders.set("Authorization", `Bearer ${this.apiKey}`);
-
-    return { url, headers: requestHeaders };
+    return {
+      url: url.toString(),
+      headers: {
+        ...{
+          Accept: "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        ...(headers ?? {}),
+      },
+    };
   }
 
   configure(opts: ClientOptions) {
@@ -76,114 +98,67 @@ export class AlldebridHttpClient {
     this.baseUrl = (parsed.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   }
 
-  /**
-   * Perform a request against the AllDebrid API and parse the standard envelope.
-   * The `dataSchema` validates the `data` field when the API returns success.
-   */
-  async request<T extends z.ZodType>(
+  async getRequest<T extends z.ZodType>(
     path: string,
     dataSchema: T,
-    options: RequestOptions = {},
-  ) {
-    const parsedOpts = RequestOptionsSchema.parse(options);
-    const method = parsedOpts.method ?? "GET";
-    const { url, headers } = this.baseRequestSetup(path, parsedOpts.headers);
-
-    if (parsedOpts.queryParams) {
-      this.addQueryParamsToUrl(url, parsedOpts.queryParams);
-    }
-
-    let body: BodyInit | undefined;
-    if (method === "POST") {
-      if (parsedOpts.json !== undefined && parsedOpts.form !== undefined) {
-        throw new Error("Provide either json or form body, not both.");
-      }
-      if (parsedOpts.json !== undefined) {
-        headers.set(
-          "content-type",
-          headers.get("content-type") ?? "application/json",
-        );
-        body = JSON.stringify(parsedOpts.json);
-      } else if (parsedOpts.form !== undefined) {
-        let sp: URLSearchParams;
-        if (parsedOpts.form instanceof URLSearchParams) sp = parsedOpts.form;
-        else {
-          sp = new URLSearchParams();
-          Object.entries(parsedOpts.form).forEach(([k, v]) => {
-            if (Array.isArray(v))
-              v.forEach((vv) => sp.append(`${k}[]`, String(vv)));
-            else if (v !== undefined && v !== null) sp.append(k, String(v));
-          });
-          const result = sp.getAll("magnets[]");
-          console.log(result);
-        }
-        if (!headers.has("content-type"))
-          headers.set(
-            "content-type",
-            "application/x-www-form-urlencoded;charset=UTF-8",
-          );
-        body = sp;
-      }
-    }
-
-    logger.debug(
-      {
-        method,
-        url: url.toString(),
-        body,
-      },
-      "alldebrid http request",
-    );
-
-    const res = await fetch(url, {
-      method,
-      headers,
-      body,
-      signal: parsedOpts.signal,
-    });
-
-    logger.debug({ status: res.status }, "alldebrid http response status");
-    const json = await res.json();
+    options?: RequestGetOptions,
+  ): Promise<ParsedSuccessEnvelope<z.output<T>> | ParsedErrorEnvelope> {
+    const { url, headers } = this.baseRequestSetup(path, options?.headers);
+    const config: AxiosRequestConfig = {
+      ...{ url, headers, method: "GET" },
+      ...(options?.queryParams ? { params: options.queryParams } : {}),
+    };
+    logger.debug(config, "alldebrid http request");
+    const { data: json } = await axios.request<unknown>(config);
     logger.debug(json, "alldebrid http raw response");
-    return parseEnvelope(json as unknown, dataSchema);
+    return parseEnvelope(json, dataSchema);
   }
 
-  /** Multipart upload for the torrent file upload endpoint. */
-  async uploadFile<T extends z.ZodType>(
+  async postRequest<T extends z.ZodType>(
     path: string,
     dataSchema: T,
-    formData: FormData,
-    options: Omit<RequestOptions, "json" | "method"> = {},
-  ) {
-    const parsedOpts = RequestOptionsSchema.omit({
-      json: true,
-      method: true,
-    }).parse(options);
-    const { url, headers } = this.baseRequestSetup(path, parsedOpts.headers);
-
-    if (parsedOpts.queryParams) {
-      this.addQueryParamsToUrl(url, parsedOpts.queryParams);
+    options?:
+      | RequestPostOptions
+      | RequestPostFormDataOptions
+      | RequestPostJsonOptions,
+  ): Promise<ParsedSuccessEnvelope<z.output<T>> | ParsedErrorEnvelope> {
+    const { url, headers } = this.baseRequestSetup(path, options?.headers);
+    const config: AxiosRequestConfig = {
+      ...{ url, headers, method: "POST" },
+      ...(options?.queryParams ? { params: options.queryParams } : {}),
+    };
+    const parsedOptions = z
+      .discriminatedUnion("requestType", [
+        RequestPostOptionsSchema,
+        RequestPostJsonOptionsSchema,
+        RequestPostFormDataOptionsSchema,
+      ])
+      .parse(options);
+    if (parsedOptions.requestType === "postJson") {
+      config.data = parsedOptions.json;
+      config.headers = {
+        ...headers,
+        ...{ "Content-Type": "application/json" },
+      };
+      logger.debug(config, "alldebrid http request");
+      const { data: json } = await axios.request<unknown>(config);
+      logger.debug(json, "alldebrid http raw response");
+      return parseEnvelope(json, dataSchema);
+    } else if (parsedOptions.requestType === "postFormData") {
+      config.data = parsedOptions.formData;
+      config.headers = {
+        ...headers,
+        ...{ "Content-Type": "multipart/form-data" },
+      };
+      logger.debug(config, "alldebrid http request");
+      const { data: json } = await axios.request<unknown>(config);
+      logger.debug(json, "alldebrid http raw response");
+      return parseEnvelope(json, dataSchema);
+    } else {
+      logger.debug(config, "alldebrid http request");
+      const { data: json } = await axios.request<unknown>(config);
+      logger.debug(json, "alldebrid http raw response");
+      return parseEnvelope(json, dataSchema);
     }
-
-    logger.debug(
-      { method: "POST", url: url.toString(), formData: true },
-      "alldebrid http upload",
-    );
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: formData,
-      signal: parsedOpts.signal,
-    });
-
-    logger.debug({ status: res.status }, "alldebrid http response");
-
-    const json = await res.json();
-    const parsed = parseEnvelope(json as unknown, dataSchema);
-    if (!parsed.ok) {
-      logger.warn({ error: parsed.error }, "api error");
-    }
-    return parsed;
   }
 }

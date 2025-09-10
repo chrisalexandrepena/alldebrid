@@ -9,6 +9,9 @@ import {
   type MagnetError,
   type UploadedMagnetSuccess,
   type UploadedMagnetErrored,
+  UploadedFileSchema,
+  type UploadedFileErrored,
+  type UploadedFileSuccess,
 } from "./types";
 import type {
   Magnet,
@@ -36,12 +39,16 @@ export class MagnetResource {
         return Object.values(entry as Record<string, unknown>);
       }, z.array(MagnetListedSchema)),
     });
-    const r = await this.client.request(
+    const r = await this.client.postRequest(
       "v4.1/magnet/status",
       MagnetsListedResponseDataSchema,
       status
-        ? { method: "POST", form: { status: status } }
-        : { method: "POST" },
+        ? {
+            requestType: "postFormData",
+            method: "POST",
+            formData: { status: status },
+          }
+        : { requestType: "simplePost", method: "POST" },
     );
     if (!r.ok && r.errorType === "alldebrid") {
       throw mapApiError(r.error, r.demo);
@@ -64,10 +71,10 @@ export class MagnetResource {
         MagnetSchema,
       ),
     });
-    const r = await this.client.request(
+    const r = await this.client.postRequest(
       "v4.1/magnet/status",
       MagnetResponseData,
-      { method: "POST", queryParams: { id } },
+      { requestType: "simplePost", method: "POST", queryParams: { id } },
     );
     if (!r.ok && r.errorType === "alldebrid") {
       throw mapApiError(r.error, r.demo);
@@ -94,12 +101,13 @@ export class MagnetResource {
       magnets: z.array(UploadedMagnetSchema),
     });
     magnets = Array.isArray(magnets) ? magnets : [magnets];
-    const r = await this.client.request(
+    const r = await this.client.postRequest(
       "v4/magnet/upload",
       UploadMagnetResponseData,
       {
+        requestType: "postFormData",
         method: "POST",
-        form: { magnets },
+        formData: { magnets },
       },
     );
     if (!r.ok && r.errorType === "alldebrid") {
@@ -111,4 +119,78 @@ export class MagnetResource {
     }
     return returnType === "array" ? r.data.magnets : r.data.magnets[0];
   }
+
+  async uploadFile(torrentFiles: {
+    fileName: string;
+    blob: Blob;
+  }): Promise<UploadedFileSuccess | UploadedFileErrored>;
+  async uploadFile(
+    torrentFiles: { fileName: string; blob: Blob }[],
+  ): Promise<(UploadedFileSuccess | UploadedFileErrored)[]>;
+  async uploadFile(
+    torrentFiles:
+      | { fileName: string; blob: Blob }
+      | { fileName: string; blob: Blob }[],
+  ): Promise<
+    | (UploadedFileSuccess | UploadedFileErrored)
+    | (UploadedFileSuccess | UploadedFileErrored)[]
+  > {
+    const returnType = Array.isArray(torrentFiles) ? "array" : "singleObject";
+    const UploadTorrentFileResponseData = z.object({
+      files: z.array(UploadedFileSchema),
+    });
+    const sp = new FormData();
+    torrentFiles = Array.isArray(torrentFiles) ? torrentFiles : [torrentFiles];
+    torrentFiles.forEach((file, i) =>
+      sp.append(`files[${i}]`, file.blob, file.fileName),
+    );
+    const r = await this.client.postRequest(
+      "v4/magnet/upload/file",
+      UploadTorrentFileResponseData,
+      { method: "POST", formData: sp, requestType: "postFormData" },
+    );
+    if (!r.ok && r.errorType === "alldebrid") {
+      throw mapApiError(r.error, r.demo);
+    } else if (!r.ok && r.errorType === "parsing") {
+      throw r.error as ZodError;
+    } else if (!r.data.files[0]) {
+      throw new Error("Empty result");
+    }
+    return returnType === "array" ? r.data.files : r.data.files[0];
+  }
+
+  // async status(params?: {
+  //   id?: number;
+  //   status?: "active" | "ready" | "expired" | "error";
+  // }) {
+  //   const r = await this.client.request(
+  //     "v4.1/magnet/status",
+  //     MagnetStatusSchema,
+  //     {
+  //       method: "POST",
+  //       form: params ? params : {},
+  //     }
+  //   );
+  //   if (!r.ok) throw mapApiError(r.error, r.demo);
+  //   return r.data;
+  // }
+
+  // async delete(id: number) {
+  //   const r = await this.client.request("magnet/delete", MagnetDeleteSchema, {
+  //     method: "POST",
+  //     form: { id },
+  //   });
+  //   if (!r.ok) throw mapApiError(r.error, r.demo);
+  //   return r.data;
+  // }
+
+  // async restart(id: number | number[]) {
+  //   const form = Array.isArray(id) ? { ids: id } : { id };
+  //   const r = await this.client.request("magnet/restart", MagnetRestartSchema, {
+  //     method: "POST",
+  //     form,
+  //   });
+  //   if (!r.ok) throw mapApiError(r.error, r.demo);
+  //   return r.data;
+  // }
 }

@@ -184,19 +184,25 @@ export const MagnetSchema = z.discriminatedUnion("statusCode", [
 ]);
 export type Magnet = z.infer<typeof MagnetSchema>;
 
-// UPLOAD MAGNET
-export const UploadedMagnetSuccessSchema = z.object({
-  magnet: z.string(),
+// UPLOAD TORRENT MAGNETS AND FILES
+const UploadTorrentSuccessBaseSchema = z.object({
   name: z.string(),
   id: z.int().gte(0),
   hash: z.string(),
   size: z.int().gte(0),
   ready: z.boolean(),
 });
+export const UploadedMagnetSuccessSchema =
+  UploadTorrentSuccessBaseSchema.extend({
+    magnet: z.string(),
+  });
 export type UploadedMagnetSuccess = z.infer<typeof UploadedMagnetSuccessSchema>;
+export const UploadedFileSuccessSchema = UploadTorrentSuccessBaseSchema.extend({
+  file: z.string(),
+});
+export type UploadedFileSuccess = z.infer<typeof UploadedFileSuccessSchema>;
 
-export const UploadedMagnetErroredSchema = z.object({
-  magnet: z.string(),
+export const UploadedTorrentErroredBaseSchema = z.object({
   error: z.object({
     code: z.enum([
       "MAGNET_NO_URI",
@@ -208,10 +214,21 @@ export const UploadedMagnetErroredSchema = z.object({
     message: z.string(),
   }),
 });
+export const UploadedMagnetErroredSchema =
+  UploadedTorrentErroredBaseSchema.extend({ magnet: z.string() });
 export type UploadedMagnetErrored = z.infer<typeof UploadedMagnetErroredSchema>;
+export const UploadedFileErroredSchema =
+  UploadedTorrentErroredBaseSchema.extend({ file: z.string() });
+export type UploadedFileErrored = z.infer<typeof UploadedFileErroredSchema>;
 
 export const UploadedMagnetSchema = z.union([
   UploadedMagnetSuccessSchema,
   UploadedMagnetErroredSchema,
 ]);
 export type UploadedMagnet = z.infer<typeof UploadedMagnetSchema>;
+
+export const UploadedFileSchema = z.union([
+  UploadedFileSuccessSchema,
+  UploadedFileErroredSchema,
+]);
+export type UploadedFile = z.infer<typeof UploadedFileSchema>;

@@ -6,9 +6,12 @@ import {
   type MagnetListedExpired,
   type MagnetListedReady,
   type MagnetReady,
+  type UploadedFileSuccess,
   type UploadedMagnetSuccess,
 } from "../../src/sdk/resources/magnets/types";
 import { Alldebrid } from "../../src";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 describe("magnets e2e test", () => {
   let client: Alldebrid;
@@ -62,6 +65,17 @@ describe("magnets e2e test", () => {
         "magnet:?xt=urn:btih:842783e3005495d5d1637f5364b59343c7844707&dn=ubuntu-18.04.2-live-server-amd64.iso",
       );
       expectTypeOf(response).toEqualTypeOf<UploadedMagnetSuccess>();
+    });
+    it("Should return a uploaded torrent file result", async () => {
+      const fileBuffer = fs.readFileSync(
+        path.join(__dirname, "findingnemo.torrent"),
+      );
+      const blob = new Blob([fileBuffer], { type: "application/x-bittorrent" });
+      const response = await client.magnet.uploadFile({
+        fileName: "findingnemo.torrent",
+        blob,
+      });
+      expectTypeOf(response).toEqualTypeOf<UploadedFileSuccess>();
     });
   });
 });
