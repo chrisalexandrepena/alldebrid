@@ -39,6 +39,7 @@ type RequestGetOptions = {
   method: "GET";
   headers?: Record<string, string | number | boolean>;
   queryParams?: Record<string, string | number | boolean>;
+  publicEndpoint?: boolean;
 };
 const RequestPostOptionsSchema = z.object({
   requestType: z.literal("simplePost"),
@@ -82,6 +83,7 @@ export class AlldebridHttpClient {
   private baseRequestSetup(
     path: string,
     headers?: RawAxiosRequestHeaders,
+    publicEndpoint?: boolean,
   ): {
     url: string;
     headers: RawAxiosRequestHeaders;
@@ -96,8 +98,8 @@ export class AlldebridHttpClient {
     const url = new URL(`${this.baseUrl}/${normalizedPath}`);
 
     const defaultHeaders = {
-      Accept: "application/json",
-      Authorization: `Bearer ${this.apiKey}`,
+      ...{ Accept: "application/json" },
+      ...(publicEndpoint ? {} : { Authorization: `Bearer ${this.apiKey}` }),
     };
 
     return {
@@ -159,7 +161,11 @@ export class AlldebridHttpClient {
     dataSchema: T,
     options?: RequestGetOptions,
   ): Promise<ParsedSuccessData<z.output<T>>> {
-    const { url, headers } = this.baseRequestSetup(path, options?.headers);
+    const { url, headers } = this.baseRequestSetup(
+      path,
+      options?.headers,
+      options?.publicEndpoint ?? false,
+    );
     const config: AxiosRequestConfig = {
       url,
       headers,
