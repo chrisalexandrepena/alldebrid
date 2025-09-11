@@ -29,8 +29,6 @@ export type {
   UploadedFileSuccess,
   UploadedFileErrored,
   DeleteMagnetResponse,
-  RestartMagnetResponse,
-  RestartMagnetBatchResponse,
   RestartMagnetSuccess,
   RestartMagnetErrored,
 } from "./resources/magnets/types";

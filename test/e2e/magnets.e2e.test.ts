@@ -6,14 +6,11 @@ import {
   type MagnetListedExpired,
   type MagnetListedReady,
   type MagnetReady,
+  RestartMagnetSuccess,
   type UploadedFile,
   type UploadedMagnet,
 } from "../../src/sdk/resources/magnets/types";
-import { 
-  Alldebrid,
-  ApiError,
-  NetworkError
-} from "../../src";
+import { Alldebrid, ApiError, NetworkError } from "../../src";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -21,6 +18,7 @@ describe("magnets e2e test", () => {
   let client: Alldebrid;
   beforeAll(() => {
     client = new Alldebrid({
+      // apiKey: "E1ws4Mpefm2evyGrXONe",
       apiKey: "staticDemoApikeyPrem",
       logLevel: "debug",
       timeout: 30000,
@@ -87,6 +85,48 @@ describe("magnets e2e test", () => {
     });
   });
 
+  describe("delete magnet", () => {
+    it("Should return delete response for valid magnet ID", async () => {
+      const readyMagnets = await client.magnet.list("ready");
+      if (!readyMagnets[0]) throw new Error("Demo magnet list is empty");
+      const response = await client.magnet.delete(readyMagnets[0].id);
+      expect(response).toBeDefined();
+      expect(response).toHaveProperty("message");
+    });
+
+    it("Should handle delete for demo (returns success)", async () => {
+      const response = await client.magnet.delete(99999999);
+      expect(response).toBeDefined();
+      expect(response).toHaveProperty("message");
+    });
+  });
+
+  describe("restart magnet", () => {
+    it("Should return restart response for single magnet ID", async () => {
+      const readyMagnets = await client.magnet.list("ready");
+      if (!readyMagnets[0]) throw new Error("Demo magnet list is empty");
+      const response = await client.magnet.restart(readyMagnets[0].id);
+      expect(response).toBeDefined();
+      expect(response).toHaveProperty("message");
+    });
+
+    it("Should throw ApiError for batch restart (demo limitation)", async () => {
+      const readyMagnets = await client.magnet.list("ready");
+      const errorMagnets = await client.magnet.list("error");
+      if (!readyMagnets[0] || !errorMagnets[0])
+        throw new Error("Demo magnet lists are empty");
+      await expect(
+        client.magnet.restart([readyMagnets[0].id, errorMagnets[0].id]),
+      ).rejects.toThrow(ApiError);
+    });
+
+    it("Should handle restart for demo (returns success)", async () => {
+      const response = await client.magnet.restart(999999999);
+      expect(response).toBeDefined();
+      expectTypeOf(response).toEqualTypeOf<RestartMagnetSuccess>();
+    });
+  });
+
   describe("error handling", () => {
     describe("configuration errors", () => {
       it("Should throw ValidationError when API key is missing", async () => {
@@ -104,17 +144,15 @@ describe("magnets e2e test", () => {
           logLevel: "debug",
         });
 
-        await expect(invalidClient.magnet.list("ready"))
-          .rejects
-          .toThrow(/API error.*AUTH/);
+        await expect(invalidClient.magnet.list("ready")).rejects.toThrow(
+          /API error.*AUTH/,
+        );
       });
     });
 
     describe("api errors", () => {
       it("Should throw ApiError for invalid magnet ID", async () => {
-        await expect(client.magnet.get(99999999))
-          .rejects
-          .toThrow(ApiError);
+        await expect(client.magnet.get(99999999)).rejects.toThrow(ApiError);
 
         try {
           await client.magnet.get(99999999);
@@ -163,9 +201,9 @@ describe("magnets e2e test", () => {
           retries: 0, // No retries
         });
 
-        await expect(timeoutClient.magnet.list("ready"))
-          .rejects
-          .toThrow(NetworkError);
+        await expect(timeoutClient.magnet.list("ready")).rejects.toThrow(
+          NetworkError,
+        );
 
         try {
           await timeoutClient.magnet.list("ready");
@@ -189,9 +227,9 @@ describe("magnets e2e test", () => {
           retries: 0,
         });
 
-        await expect(invalidUrlClient.magnet.list("ready"))
-          .rejects
-          .toThrow(NetworkError);
+        await expect(invalidUrlClient.magnet.list("ready")).rejects.toThrow(
+          NetworkError,
+        );
       });
     });
 
@@ -204,7 +242,7 @@ describe("magnets e2e test", () => {
           expect(error).toHaveProperty("message");
           expect(error).toHaveProperty("stack");
           expect(error).toHaveProperty("timestamp");
-          
+
           if (error instanceof ApiError) {
             expect(error).toHaveProperty("type", "api");
             expect(error).toHaveProperty("code");

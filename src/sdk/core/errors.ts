@@ -29,12 +29,12 @@ export abstract class SdkError extends Error {
 
 export class NetworkError extends SdkError {
   readonly type = "network" as const;
-  readonly cause: Error;
+  override readonly cause: Error;
   readonly retryable: boolean;
   readonly statusCode?: number;
 
   constructor(cause: Error, statusCode?: number, requestId?: string) {
-    const message = statusCode 
+    const message = statusCode
       ? `Network error (${statusCode}): ${cause.message}`
       : `Network error: ${cause.message}`;
     super(message, requestId);
@@ -68,9 +68,9 @@ export class ValidationError extends SdkError {
   readonly issues: ZodError["issues"];
 
   constructor(zodError: ZodError, requestId?: string) {
-    const issueMessages = zodError.issues.map(issue => 
-      `${issue.path.join('.')}: ${issue.message}`
-    ).join(', ');
+    const issueMessages = zodError.issues
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      .join(", ");
     super(`Validation error: ${issueMessages}`, requestId);
     this.issues = zodError.issues;
   }
@@ -167,18 +167,18 @@ export function mapError<T, E, F>(
 // For batch operations - collect successes and failures
 export interface BatchResult<T> {
   successes: T[];
-  failures: Array<{ index: number; error: SdkError }>;
+  failures: SdkError[];
 }
 
 export function createBatchResult<T>(
   results: Result<T, SdkError>[],
 ): BatchResult<T> {
   const successes: T[] = [];
-  const failures: Array<{ index: number; error: SdkError }> = [];
+  const failures: SdkError[] = [];
 
-  results.forEach((result, index) => {
+  results.forEach((result) => {
     if (result.ok) successes.push(result.data);
-    else failures.push({ index, error: result.error });
+    else failures.push(result.error);
   });
 
   return { successes, failures };

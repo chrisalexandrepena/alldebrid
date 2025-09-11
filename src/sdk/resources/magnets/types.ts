@@ -240,11 +240,6 @@ export const DeleteMagnetResponseSchema = z.object({
 export type DeleteMagnetResponse = z.infer<typeof DeleteMagnetResponseSchema>;
 
 // RESTART
-export const RestartMagnetResponseSchema = z.object({
-  message: z.string(),
-});
-export type RestartMagnetResponse = z.infer<typeof RestartMagnetResponseSchema>;
-
 export const RestartMagnetSuccessSchema = z.object({
   magnet: z.string(),
   message: z.string(),
@@ -259,12 +254,3 @@ export const RestartMagnetErroredSchema = z.object({
   }),
 });
 export type RestartMagnetErrored = z.infer<typeof RestartMagnetErroredSchema>;
-
-export const RestartMagnetBatchResponseSchema = z.object({
-  magnets: z.array(
-    z.union([RestartMagnetSuccessSchema, RestartMagnetErroredSchema]),
-  ),
-});
-export type RestartMagnetBatchResponse = z.infer<
-  typeof RestartMagnetBatchResponseSchema
->;

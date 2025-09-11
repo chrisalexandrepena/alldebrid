@@ -10,12 +10,12 @@ import {
   type UploadedFileSuccess,
   DeleteMagnetResponseSchema,
   type DeleteMagnetResponse,
-  RestartMagnetResponseSchema,
-  type RestartMagnetResponse,
-  RestartMagnetBatchResponseSchema,
-  type RestartMagnetBatchResponse,
   MagnetSchema,
   type Magnet,
+  type RestartMagnetSuccess,
+  type RestartMagnetErrored,
+  RestartMagnetSuccessSchema,
+  RestartMagnetErroredSchema,
 } from "./types";
 import type {
   MagnetListed,
@@ -37,14 +37,10 @@ export class MagnetResource {
 
   async list(status: "active"): Promise<MagnetListedReady[]>;
   async list(status: "ready"): Promise<MagnetListedReady[]>;
-  async list(
-    status: "expired",
-  ): Promise<MagnetListedExpired[]>;
+  async list(status: "expired"): Promise<MagnetListedExpired[]>;
   async list(status: "error"): Promise<MagnetListedError[]>;
   async list(): Promise<MagnetListed[]>;
-  async list(
-    status?: MagnetListStatusFilters,
-  ): Promise<MagnetListed[]> {
+  async list(status?: MagnetListStatusFilters): Promise<MagnetListed[]> {
     const MagnetsListedResponseDataSchema = z.object({
       magnets: z.preprocess((entry) => {
         if (Array.isArray(entry)) return entry;
@@ -112,13 +108,16 @@ export class MagnetResource {
       },
     );
 
-    if (!response.data.magnets[0]) throw createConfigurationError("No magnets returned from upload");
+    if (!response.data.magnets[0])
+      throw createConfigurationError("No magnets returned from upload");
 
     if (isArray) {
-      const results = response.data.magnets.map((magnet: UploadedMagnetSuccess | UploadedMagnetErrored) => ({
-        ok: true as const,
-        data: magnet,
-      }));
+      const results = response.data.magnets.map(
+        (magnet: UploadedMagnetSuccess | UploadedMagnetErrored) => ({
+          ok: true as const,
+          data: magnet,
+        }),
+      );
 
       return createBatchResult(results);
     }
@@ -155,13 +154,16 @@ export class MagnetResource {
       { method: "POST", formData, requestType: "postFormData" },
     );
 
-    if (!response.data.files[0]) throw createConfigurationError("No files returned from upload");
+    if (!response.data.files[0])
+      throw createConfigurationError("No files returned from upload");
 
     if (isArray) {
-      const results = response.data.files.map((file: UploadedFileSuccess | UploadedFileErrored) => ({
-        ok: true as const,
-        data: file,
-      }));
+      const results = response.data.files.map(
+        (file: UploadedFileSuccess | UploadedFileErrored) => ({
+          ok: true as const,
+          data: file,
+        }),
+      );
 
       return createBatchResult(results);
     }
@@ -183,19 +185,29 @@ export class MagnetResource {
     return response.data;
   }
 
-  async restart(id: number): Promise<RestartMagnetResponse>;
+  async restart(
+    id: number,
+  ): Promise<RestartMagnetSuccess | RestartMagnetErrored>;
   async restart(
     ids: number[],
-  ): Promise<RestartMagnetBatchResponse>;
+  ): Promise<(RestartMagnetSuccess | RestartMagnetErrored)[]>;
   async restart(
     idOrIds: number | number[],
-  ): Promise<RestartMagnetResponse | RestartMagnetBatchResponse> {
+  ): Promise<
+    | RestartMagnetSuccess
+    | RestartMagnetErrored
+    | (RestartMagnetSuccess | RestartMagnetErrored)[]
+  > {
     const isArray = Array.isArray(idOrIds);
 
     if (isArray) {
       const response = await this.client.postRequest(
         "v4/magnet/restart",
-        RestartMagnetBatchResponseSchema,
+        z.object({
+          magnets: z.array(
+            z.union([RestartMagnetSuccessSchema, RestartMagnetErroredSchema]),
+          ),
+        }),
         {
           requestType: "postFormData",
           method: "POST",
@@ -203,19 +215,20 @@ export class MagnetResource {
         },
       );
 
-      return response.data;
+      return response.data.magnets;
     } else {
+      const id = idOrIds;
       const response = await this.client.postRequest(
         "v4/magnet/restart",
-        RestartMagnetResponseSchema,
+        z.object({ message: z.string() }),
         {
           requestType: "postFormData",
           method: "POST",
-          formData: { id: idOrIds.toString() },
+          formData: { id: id.toString() },
         },
       );
 
-      return response.data;
+      return { magnet: id.toString(), message: response.data.message };
     }
   }
 }
