@@ -40,19 +40,13 @@ describe("AlldebridHttpClient", () => {
   });
 
   describe("Configuration", () => {
-    it("should return configuration error when not configured", async () => {
+    it("should throw configuration error when not configured", async () => {
       const unconfiguredClient = new AlldebridHttpClient();
       const schema = z.object({ test: z.string() });
 
-      const result = await unconfiguredClient.getRequest("/test", schema);
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("configuration");
-        if (result.error.type === "configuration") {
-          expect(result.error.message).toContain("not configured");
-        }
-      }
+      await expect(() => unconfiguredClient.getRequest("/test", schema)).rejects.toThrow(
+        /Configuration error.*not configured/
+      );
     });
 
     it("should configure client with proper defaults", () => {
@@ -74,10 +68,7 @@ describe("AlldebridHttpClient", () => {
       const schema = z.object({ id: z.number(), name: z.string() });
       const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data.data).toEqual(responseData.data);
-      }
+      expect(result.data).toEqual(responseData.data);
 
       expect(mockedAxios.request).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -103,7 +94,7 @@ describe("AlldebridHttpClient", () => {
         queryParams: { page: 1, limit: 10 },
       });
 
-      expect(result.ok).toBe(true);
+      expect(result.data.result).toBe("ok");
       expect(mockedAxios.request).toHaveBeenCalledWith(
         expect.objectContaining({
           params: { page: 1, limit: 10 },
@@ -125,10 +116,7 @@ describe("AlldebridHttpClient", () => {
         json: { file: "test.txt" },
       });
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data.data.uploaded).toBe(true);
-      }
+      expect(result.data.uploaded).toBe(true);
 
       expect(mockedAxios.request).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -156,7 +144,7 @@ describe("AlldebridHttpClient", () => {
         formData,
       });
 
-      expect(result.ok).toBe(true);
+      expect(result.data.uploaded).toBe(true);
       expect(mockedAxios.request).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "POST",
@@ -179,7 +167,7 @@ describe("AlldebridHttpClient", () => {
         method: "POST",
       });
 
-      expect(result.ok).toBe(true);
+      expect(result.data.result).toBe("ok");
       expect(mockedAxios.request).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "POST",
@@ -189,7 +177,7 @@ describe("AlldebridHttpClient", () => {
   });
 
   describe("Error Handling", () => {
-    it("should handle API errors", async () => {
+    it("should throw API errors", async () => {
       (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: {
           status: "error",
@@ -198,37 +186,25 @@ describe("AlldebridHttpClient", () => {
       });
 
       const schema = z.object({});
-      const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("api");
-        if (result.error.type === "api") {
-          expect(result.error.subtype).toBe("auth");
-          expect(result.error.code).toBe("AUTH_REQUIRED");
-          expect(result.error.message).toBe("Authentication required");
-        }
-      }
+      await expect(() => client.getRequest("/test", schema)).rejects.toThrow(
+        /API error.*AUTH_REQUIRED.*Authentication required/
+      );
     });
 
-    it("should handle validation errors", async () => {
+    it("should throw validation errors", async () => {
       (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: { invalid: "response" },
       });
 
       const schema = z.object({ required: z.string() });
-      const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("validation");
-        if (result.error.type === "validation") {
-          expect(result.error.issues).toBeDefined();
-        }
-      }
+      await expect(() => client.getRequest("/test", schema)).rejects.toThrow(
+        /Validation error/
+      );
     });
 
-    it("should handle network errors", async () => {
+    it("should throw network errors", async () => {
       // Create a proper error object that preserves properties
       const networkError = Object.assign(new Error("Network Error"), {
         code: "ECONNRESET",
@@ -237,20 +213,13 @@ describe("AlldebridHttpClient", () => {
       (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValueOnce(networkError);
 
       const schema = z.object({});
-      const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("network");
-        if (result.error.type === "network") {
-          // The error object gets corrupted in the test environment,
-          // so we test that it's a network error but not the retryability
-          expect(result.error.cause).toBeDefined();
-        }
-      }
+      await expect(() => client.getRequest("/test", schema)).rejects.toThrow(
+        /Network error/
+      );
     });
 
-    it("should handle HTTP 500 errors as retryable", async () => {
+    it("should throw HTTP 500 errors as retryable", async () => {
       // Create a proper error object that preserves the response property
       const httpError = Object.assign(new Error("Server Error"), {
         response: { status: 500 },
@@ -259,36 +228,23 @@ describe("AlldebridHttpClient", () => {
       (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValueOnce(httpError);
 
       const schema = z.object({});
-      const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("network");
-        if (result.error.type === "network") {
-          // In the test environment, error object properties get corrupted
-          // during the mocking process, so we just test that it's a network error
-          expect(result.error.cause).toBeDefined();
-        }
-      }
+      await expect(() => client.getRequest("/test", schema)).rejects.toThrow(
+        /Network error/
+      );
     });
 
-    it("should handle HTTP 404 errors as non-retryable", async () => {
+    it("should throw HTTP 404 errors as non-retryable", async () => {
       const httpError = Object.assign(new Error("Not Found"), {
         response: { status: 404 },
       });
       (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValueOnce(httpError);
 
       const schema = z.object({});
-      const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("network");
-        if (result.error.type === "network") {
-          expect(result.error.retryable).toBe(false);
-          expect(result.error.statusCode).toBe(404);
-        }
-      }
+      await expect(() => client.getRequest("/test", schema)).rejects.toThrow(
+        /Network error.*Not Found/
+      );
     });
   });
 
@@ -309,7 +265,7 @@ describe("AlldebridHttpClient", () => {
       const schema = z.object({ result: z.string() });
       const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(true);
+      expect(result.data.result).toBe("ok");
       expect(mockedAxios.request).toHaveBeenCalledTimes(3);
     });
 
@@ -321,9 +277,10 @@ describe("AlldebridHttpClient", () => {
       (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValue(networkError);
 
       const schema = z.object({});
-      const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(false);
+      await expect(() => client.getRequest("/test", schema)).rejects.toThrow(
+        /Network error.*Connection timeout/
+      );
       // Initial request + 2 retries = 3 total calls
       expect(mockedAxios.request).toHaveBeenCalledTimes(3);
     });
@@ -336,9 +293,10 @@ describe("AlldebridHttpClient", () => {
       (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValueOnce(httpError);
 
       const schema = z.object({});
-      const result = await client.getRequest("/test", schema);
 
-      expect(result.ok).toBe(false);
+      await expect(() => client.getRequest("/test", schema)).rejects.toThrow(
+        /Network error.*Bad Request/
+      );
       expect(mockedAxios.request).toHaveBeenCalledTimes(1);
     });
   });

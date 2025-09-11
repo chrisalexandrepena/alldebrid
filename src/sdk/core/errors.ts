@@ -11,63 +11,87 @@ export type ResultSuccess<T> = { ok: true; data: T };
 export type ResultError<E> = { ok: false; error: E };
 export type Result<T, E = SdkError> = ResultSuccess<T> | ResultError<E>;
 
-// Enhanced error types with context and retry information
-export type SdkError =
-  | NetworkError
-  | ApiError
-  | ValidationError
-  | ConfigurationError;
+// Enhanced error classes that extend Error for proper exception throwing
+export abstract class SdkError extends Error {
+  abstract readonly type: string;
+  abstract readonly retryable: boolean;
+  readonly requestId?: string;
+  readonly timestamp: Date;
 
-export interface NetworkError {
-  type: "network";
-  cause: Error;
-  retryable: boolean;
-  statusCode?: number;
-  requestId?: string;
-  timestamp: Date;
+  constructor(message: string, requestId?: string) {
+    super(message);
+    this.name = this.constructor.name;
+    this.requestId = requestId;
+    this.timestamp = new Date();
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
 }
 
-export interface ApiError {
-  type: "api";
-  subtype: "auth" | "rateLimit" | "notFound" | "unknown";
-  code: string;
-  message: string;
-  retryable: boolean;
-  demo?: boolean;
-  requestId?: string;
-  timestamp: Date;
+export class NetworkError extends SdkError {
+  readonly type = "network" as const;
+  readonly cause: Error;
+  readonly retryable: boolean;
+  readonly statusCode?: number;
+
+  constructor(cause: Error, statusCode?: number, requestId?: string) {
+    const message = statusCode 
+      ? `Network error (${statusCode}): ${cause.message}`
+      : `Network error: ${cause.message}`;
+    super(message, requestId);
+    this.cause = cause;
+    this.statusCode = statusCode;
+    this.retryable = isRetryableHttpError(cause, statusCode);
+  }
 }
 
-export interface ValidationError {
-  type: "validation";
-  issues: ZodError["issues"];
-  retryable: false;
-  requestId?: string;
-  timestamp: Date;
+export class ApiError extends SdkError {
+  readonly type = "api" as const;
+  readonly subtype: "auth" | "rateLimit" | "notFound" | "unknown";
+  readonly code: string;
+  readonly originalMessage: string;
+  readonly retryable: boolean;
+  readonly demo?: boolean;
+
+  constructor(apiError: ApiErrorResponse, demo = false, requestId?: string) {
+    super(`API error (${apiError.code}): ${apiError.message}`, requestId);
+    this.code = apiError.code;
+    this.originalMessage = apiError.message;
+    this.subtype = determineApiErrorSubtype(apiError.code);
+    this.retryable = this.subtype === "rateLimit";
+    this.demo = demo;
+  }
 }
 
-export interface ConfigurationError {
-  type: "configuration";
-  message: string;
-  retryable: false;
-  timestamp: Date;
+export class ValidationError extends SdkError {
+  readonly type = "validation" as const;
+  readonly retryable = false;
+  readonly issues: ZodError["issues"];
+
+  constructor(zodError: ZodError, requestId?: string) {
+    const issueMessages = zodError.issues.map(issue => 
+      `${issue.path.join('.')}: ${issue.message}`
+    ).join(', ');
+    super(`Validation error: ${issueMessages}`, requestId);
+    this.issues = zodError.issues;
+  }
 }
 
-// Error factory functions
+export class ConfigurationError extends SdkError {
+  readonly type = "configuration" as const;
+  readonly retryable = false;
+
+  constructor(message: string) {
+    super(`Configuration error: ${message}`);
+  }
+}
+
+// Error factory functions - now return error instances instead of plain objects
 export function createNetworkError(
   cause: Error,
   statusCode?: number,
   requestId?: string,
 ): NetworkError {
-  const retryable = isRetryableHttpError(cause, statusCode);
-  return {
-    type: "network",
-    cause,
-    retryable,
-    statusCode,
-    requestId,
-    timestamp: new Date(),
-  };
+  return new NetworkError(cause, statusCode, requestId);
 }
 
 export function createApiError(
@@ -75,46 +99,23 @@ export function createApiError(
   demo = false,
   requestId?: string,
 ): ApiError {
-  const subtype = determineApiErrorSubtype(apiError.code);
-  return {
-    type: "api",
-    subtype,
-    code: apiError.code,
-    message: apiError.message,
-    retryable: subtype === "rateLimit",
-    demo,
-    requestId,
-    timestamp: new Date(),
-  };
+  return new ApiError(apiError, demo, requestId);
 }
 
 export function createValidationError(
   zodError: ZodError,
   requestId?: string,
 ): ValidationError {
-  return {
-    type: "validation",
-    issues: zodError.issues,
-    retryable: false,
-    requestId,
-    timestamp: new Date(),
-  };
+  return new ValidationError(zodError, requestId);
 }
 
 export function createConfigurationError(message: string): ConfigurationError {
-  return {
-    type: "configuration",
-    message,
-    retryable: false,
-    timestamp: new Date(),
-  };
+  return new ConfigurationError(message);
 }
 
 // Helper functions
 function isRetryableHttpError(error: Error, statusCode?: number): boolean {
-  if (statusCode !== undefined) {
-    return statusCode >= 500 || statusCode === 429;
-  }
+  if (statusCode !== undefined) return statusCode >= 500 || statusCode === 429;
 
   const axiosLikeError = error as { code?: string };
   return (
@@ -151,9 +152,7 @@ export function mapResult<T, U, E>(
   result: Result<T, E>,
   fn: (data: T) => U,
 ): Result<U, E> {
-  if (result.ok) {
-    return { ok: true, data: fn(result.data) };
-  }
+  if (result.ok) return { ok: true, data: fn(result.data) };
   return result;
 }
 
@@ -161,9 +160,7 @@ export function mapError<T, E, F>(
   result: Result<T, E>,
   fn: (error: E) => F,
 ): Result<T, F> {
-  if (result.ok) {
-    return result;
-  }
+  if (result.ok) return result;
   return { ok: false, error: fn(result.error) };
 }
 
@@ -180,11 +177,8 @@ export function createBatchResult<T>(
   const failures: Array<{ index: number; error: SdkError }> = [];
 
   results.forEach((result, index) => {
-    if (result.ok) {
-      successes.push(result.data);
-    } else {
-      failures.push({ index, error: result.error });
-    }
+    if (result.ok) successes.push(result.data);
+    else failures.push({ index, error: result.error });
   });
 
   return { successes, failures };

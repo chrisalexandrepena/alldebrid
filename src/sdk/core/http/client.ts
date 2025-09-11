@@ -2,8 +2,7 @@ import { z } from "zod";
 import { type ParsedSuccessData, parseEnvelope } from "./envelope";
 import { logger } from "../logger";
 import {
-  type Result,
-  type SdkError,
+  SdkError,
   createNetworkError,
   createConfigurationError,
 } from "../errors";
@@ -83,20 +82,14 @@ export class AlldebridHttpClient {
   private baseRequestSetup(
     path: string,
     headers?: RawAxiosRequestHeaders,
-  ): Result<
-    {
-      url: string;
-      headers: RawAxiosRequestHeaders;
-    },
-    SdkError
-  > {
+  ): {
+    url: string;
+    headers: RawAxiosRequestHeaders;
+  } {
     if (!this.apiKey) {
-      return {
-        ok: false,
-        error: createConfigurationError(
-          "AlldebridHttpClient is not configured. Call configure({ apiKey }) first.",
-        ),
-      };
+      throw createConfigurationError(
+        "AlldebridHttpClient is not configured. Call configure({ apiKey }) first.",
+      );
     }
 
     const normalizedPath = this.normalizePath(path);
@@ -108,11 +101,8 @@ export class AlldebridHttpClient {
     };
 
     return {
-      ok: true,
-      data: {
-        url: url.toString(),
-        headers: { ...defaultHeaders, ...headers },
-      },
+      url: url.toString(),
+      headers: { ...defaultHeaders, ...headers },
     };
   }
 
@@ -128,7 +118,7 @@ export class AlldebridHttpClient {
     config: AxiosRequestConfig,
     dataSchema: T,
     retryCount = 0,
-  ): Promise<Result<ParsedSuccessData<z.output<T>>, SdkError>> {
+  ): Promise<ParsedSuccessData<z.output<T>>> {
     try {
       logger.debug({ ...config }, "alldebrid http request");
       const { data: json } = await axios.request<unknown>({
@@ -136,8 +126,12 @@ export class AlldebridHttpClient {
         timeout: this.timeout,
       });
       logger.debug({ json }, "alldebrid http raw response");
-      return parseEnvelope(json, dataSchema);
-    } catch (error) {
+      const result = parseEnvelope(json, dataSchema);
+      if (result.ok) return result.data;
+      else throw result.error;
+    } catch (error: unknown) {
+      if (error instanceof SdkError) throw error;
+
       const networkError = createNetworkError(
         error as Error,
         (error as { response?: { status?: number } })?.response?.status,
@@ -152,21 +146,8 @@ export class AlldebridHttpClient {
         return this.executeRequest(config, dataSchema, retryCount + 1);
       }
 
-      return { ok: false, error: networkError };
+      throw networkError;
     }
-  }
-
-  private isRetryableError(error: unknown): boolean {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      return (
-        error.code === "ECONNRESET" ||
-        error.code === "ETIMEDOUT" ||
-        error.code === "ENOTFOUND" ||
-        (status !== undefined && (status >= 500 || status === 429))
-      );
-    }
-    return false;
   }
 
   private delay(ms: number): Promise<void> {
@@ -177,11 +158,8 @@ export class AlldebridHttpClient {
     path: string,
     dataSchema: T,
     options?: RequestGetOptions,
-  ): Promise<Result<ParsedSuccessData<z.output<T>>, SdkError>> {
-    const setupResult = this.baseRequestSetup(path, options?.headers);
-    if (!setupResult.ok) return setupResult;
-
-    const { url, headers } = setupResult.data;
+  ): Promise<ParsedSuccessData<z.output<T>>> {
+    const { url, headers } = this.baseRequestSetup(path, options?.headers);
     const config: AxiosRequestConfig = {
       url,
       headers,
@@ -199,11 +177,8 @@ export class AlldebridHttpClient {
       | RequestPostOptions
       | RequestPostFormDataOptions
       | RequestPostJsonOptions,
-  ): Promise<Result<ParsedSuccessData<z.output<T>>, SdkError>> {
-    const setupResult = this.baseRequestSetup(path, options?.headers);
-    if (!setupResult.ok) return setupResult;
-
-    const { url, headers } = setupResult.data;
+  ): Promise<ParsedSuccessData<z.output<T>>> {
+    const { url, headers } = this.baseRequestSetup(path, options?.headers);
     let config: AxiosRequestConfig = {
       url,
       headers,
@@ -211,9 +186,7 @@ export class AlldebridHttpClient {
       ...(options?.queryParams && { params: options.queryParams }),
     };
 
-    if (!options) {
-      return this.executeRequest(config, dataSchema);
-    }
+    if (!options) return this.executeRequest(config, dataSchema);
 
     const parsedOptions = z
       .discriminatedUnion("requestType", [

@@ -63,7 +63,7 @@ describe("parseEnvelope", () => {
       expect(r.error.type).toBe("api");
       if (r.error.type === "api") {
         expect(r.error.code).toBe("E_OOPS");
-        expect(r.error.message).toBe("Something went wrong");
+        expect(r.error.originalMessage).toBe("Something went wrong");
         expect(r.error.demo).toBe(false);
       }
     }
@@ -83,7 +83,7 @@ describe("parseEnvelope", () => {
       expect(r.error.type).toBe("api");
       if (r.error.type === "api") {
         expect(r.error.code).toBe("E_TOKEN");
-        expect(r.error.message).toBe("Invalid token");
+        expect(r.error.originalMessage).toBe("Invalid token");
         expect(r.error.demo).toBe(true);
       }
     }

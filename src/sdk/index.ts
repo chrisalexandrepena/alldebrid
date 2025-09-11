@@ -5,24 +5,15 @@ import { MagnetResource } from "./resources/magnets";
 
 export type { ClientOptions } from "./core/http/client";
 
-// Re-export all error handling types and utilities
+// Re-export error classes and batch result utilities
 export {
-  type Result,
-  type SdkError,
-  type NetworkError,
-  type ApiError,
-  type ValidationError,
-  type ConfigurationError,
+  SdkError,
+  NetworkError,
+  ApiError,
+  ValidationError,
+  ConfigurationError,
   type BatchResult,
-  isOk,
-  isError,
-  mapResult,
-  mapError,
   createBatchResult,
-  createNetworkError,
-  createApiError,
-  createValidationError,
-  createConfigurationError,
 } from "./core/errors";
 
 // Re-export magnet types

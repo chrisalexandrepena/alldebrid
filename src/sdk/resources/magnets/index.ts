@@ -24,10 +24,9 @@ import type {
   MagnetListedReady,
 } from "./types";
 import {
-  type Result,
-  type SdkError,
   type BatchResult,
   createBatchResult,
+  createConfigurationError,
 } from "../../core/errors";
 
 export type MagnetListStatusFilters = "active" | "ready" | "expired" | "error";
@@ -36,16 +35,16 @@ type InputTorrentFile = { fileName: string; blob: Blob };
 export class MagnetResource {
   constructor(private readonly client: AlldebridHttpClient) {}
 
-  async list(status: "active"): Promise<Result<MagnetListedReady[], SdkError>>;
-  async list(status: "ready"): Promise<Result<MagnetListedReady[], SdkError>>;
+  async list(status: "active"): Promise<MagnetListedReady[]>;
+  async list(status: "ready"): Promise<MagnetListedReady[]>;
   async list(
     status: "expired",
-  ): Promise<Result<MagnetListedExpired[], SdkError>>;
-  async list(status: "error"): Promise<Result<MagnetListedError[], SdkError>>;
-  async list(): Promise<Result<MagnetListed[], SdkError>>;
+  ): Promise<MagnetListedExpired[]>;
+  async list(status: "error"): Promise<MagnetListedError[]>;
+  async list(): Promise<MagnetListed[]>;
   async list(
     status?: MagnetListStatusFilters,
-  ): Promise<Result<MagnetListed[], SdkError>> {
+  ): Promise<MagnetListed[]> {
     const MagnetsListedResponseDataSchema = z.object({
       magnets: z.preprocess((entry) => {
         if (Array.isArray(entry)) return entry;
@@ -65,15 +64,10 @@ export class MagnetResource {
         : { requestType: "simplePost", method: "POST" },
     );
 
-    if (!response.ok) return response;
-
-    return {
-      ok: true,
-      data: response.data.data.magnets,
-    };
+    return response.data.magnets;
   }
 
-  async get(id: number): Promise<Result<Magnet, SdkError>> {
+  async get(id: number): Promise<Magnet> {
     const MagnetResponseData = z.object({
       magnets: z.preprocess(
         (val) => (Array.isArray(val) ? val[0] : val),
@@ -87,29 +81,20 @@ export class MagnetResource {
       { requestType: "simplePost", method: "POST", queryParams: { id } },
     );
 
-    if (!response.ok) return response;
-    return {
-      ok: true,
-      data: response.data.data.magnets,
-    };
+    return response.data.magnets;
   }
 
   async upload(
     magnets: string,
-  ): Promise<Result<UploadedMagnetSuccess | UploadedMagnetErrored, SdkError>>;
+  ): Promise<UploadedMagnetSuccess | UploadedMagnetErrored>;
   async upload(
     magnets: string[],
-  ): Promise<
-    Result<BatchResult<UploadedMagnetSuccess | UploadedMagnetErrored>, SdkError>
-  >;
+  ): Promise<BatchResult<UploadedMagnetSuccess | UploadedMagnetErrored>>;
   async upload(
     magnets: string | string[],
   ): Promise<
-    | Result<UploadedMagnetSuccess | UploadedMagnetErrored, SdkError>
-    | Result<
-        BatchResult<UploadedMagnetSuccess | UploadedMagnetErrored>,
-        SdkError
-      >
+    | (UploadedMagnetSuccess | UploadedMagnetErrored)
+    | BatchResult<UploadedMagnetSuccess | UploadedMagnetErrored>
   > {
     const isArray = Array.isArray(magnets);
     const UploadMagnetResponseDataSchema = z.object({
@@ -127,52 +112,31 @@ export class MagnetResource {
       },
     );
 
-    if (!response.ok) return response;
-
-    const data = response.data.data;
-    if (!data.magnets[0]) {
-      return {
-        ok: false,
-        error: {
-          type: "configuration" as const,
-          message: "No magnets returned from upload",
-          retryable: false,
-          timestamp: new Date(),
-        },
-      };
-    }
+    if (!response.data.magnets[0]) throw createConfigurationError("No magnets returned from upload");
 
     if (isArray) {
-      const results = data.magnets.map((magnet) => ({
+      const results = response.data.magnets.map((magnet: UploadedMagnetSuccess | UploadedMagnetErrored) => ({
         ok: true as const,
         data: magnet,
       }));
 
-      return {
-        ok: true,
-        data: createBatchResult(results),
-      };
+      return createBatchResult(results);
     }
 
-    return {
-      ok: true,
-      data: data.magnets[0],
-    };
+    return response.data.magnets[0];
   }
 
   async uploadFile(
     torrentFiles: InputTorrentFile,
-  ): Promise<Result<UploadedFileSuccess | UploadedFileErrored, SdkError>>;
+  ): Promise<UploadedFileSuccess | UploadedFileErrored>;
   async uploadFile(
     torrentFiles: InputTorrentFile[],
-  ): Promise<
-    Result<BatchResult<UploadedFileSuccess | UploadedFileErrored>, SdkError>
-  >;
+  ): Promise<BatchResult<UploadedFileSuccess | UploadedFileErrored>>;
   async uploadFile(
     torrentFiles: InputTorrentFile | InputTorrentFile[],
   ): Promise<
-    | Result<UploadedFileSuccess | UploadedFileErrored, SdkError>
-    | Result<BatchResult<UploadedFileSuccess | UploadedFileErrored>, SdkError>
+    | (UploadedFileSuccess | UploadedFileErrored)
+    | BatchResult<UploadedFileSuccess | UploadedFileErrored>
   > {
     const isArray = Array.isArray(torrentFiles);
     const UploadTorrentFileResponseData = z.object({
@@ -191,40 +155,21 @@ export class MagnetResource {
       { method: "POST", formData, requestType: "postFormData" },
     );
 
-    if (!response.ok) return response;
-
-    const { data } = response.data;
-    if (!data.files[0]) {
-      return {
-        ok: false,
-        error: {
-          type: "configuration" as const,
-          message: "No files returned from upload",
-          retryable: false,
-          timestamp: new Date(),
-        },
-      };
-    }
+    if (!response.data.files[0]) throw createConfigurationError("No files returned from upload");
 
     if (isArray) {
-      const results = data.files.map((file) => ({
+      const results = response.data.files.map((file: UploadedFileSuccess | UploadedFileErrored) => ({
         ok: true as const,
         data: file,
       }));
 
-      return {
-        ok: true,
-        data: createBatchResult(results),
-      };
+      return createBatchResult(results);
     }
 
-    return {
-      ok: true,
-      data: data.files[0],
-    };
+    return response.data.files[0];
   }
 
-  async delete(id: number): Promise<Result<DeleteMagnetResponse, SdkError>> {
+  async delete(id: number): Promise<DeleteMagnetResponse> {
     const response = await this.client.postRequest(
       "v4/magnet/delete",
       DeleteMagnetResponseSchema,
@@ -235,24 +180,16 @@ export class MagnetResource {
       },
     );
 
-    if (!response.ok) return response;
-
-    return {
-      ok: true,
-      data: response.data.data,
-    };
+    return response.data;
   }
 
-  async restart(id: number): Promise<Result<RestartMagnetResponse, SdkError>>;
+  async restart(id: number): Promise<RestartMagnetResponse>;
   async restart(
     ids: number[],
-  ): Promise<Result<RestartMagnetBatchResponse, SdkError>>;
+  ): Promise<RestartMagnetBatchResponse>;
   async restart(
     idOrIds: number | number[],
-  ): Promise<
-    | Result<RestartMagnetResponse, SdkError>
-    | Result<RestartMagnetBatchResponse, SdkError>
-  > {
+  ): Promise<RestartMagnetResponse | RestartMagnetBatchResponse> {
     const isArray = Array.isArray(idOrIds);
 
     if (isArray) {
@@ -266,14 +203,7 @@ export class MagnetResource {
         },
       );
 
-      if (!response.ok) {
-        return response;
-      }
-
-      return {
-        ok: true,
-        data: response.data.data,
-      };
+      return response.data;
     } else {
       const response = await this.client.postRequest(
         "v4/magnet/restart",
@@ -285,14 +215,7 @@ export class MagnetResource {
         },
       );
 
-      if (!response.ok) {
-        return response;
-      }
-
-      return {
-        ok: true,
-        data: response.data.data,
-      };
+      return response.data;
     }
   }
 }
