@@ -3,9 +3,7 @@ import type { ClientOptions } from "./core/http/client";
 import { logger } from "./core/logger";
 import { MagnetResource } from "./resources/magnets";
 
-export type {
-  ClientOptions,
-} from "./core/http/client";
+export type { ClientOptions } from "./core/http/client";
 
 // Re-export all error handling types and utilities
 export {
@@ -29,7 +27,6 @@ export {
 
 // Re-export magnet types
 export type {
-  Magnet,
   MagnetListed,
   MagnetListedError,
   MagnetListedExpired,
@@ -40,6 +37,11 @@ export type {
   UploadedMagnetErrored,
   UploadedFileSuccess,
   UploadedFileErrored,
+  DeleteMagnetResponse,
+  RestartMagnetResponse,
+  RestartMagnetBatchResponse,
+  RestartMagnetSuccess,
+  RestartMagnetErrored,
 } from "./resources/magnets/types";
 
 export class Alldebrid {

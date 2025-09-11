@@ -232,3 +232,39 @@ export const UploadedFileSchema = z.union([
   UploadedFileErroredSchema,
 ]);
 export type UploadedFile = z.infer<typeof UploadedFileSchema>;
+
+// DELETE
+export const DeleteMagnetResponseSchema = z.object({
+  message: z.string(),
+});
+export type DeleteMagnetResponse = z.infer<typeof DeleteMagnetResponseSchema>;
+
+// RESTART
+export const RestartMagnetResponseSchema = z.object({
+  message: z.string(),
+});
+export type RestartMagnetResponse = z.infer<typeof RestartMagnetResponseSchema>;
+
+export const RestartMagnetSuccessSchema = z.object({
+  magnet: z.string(),
+  message: z.string(),
+});
+export type RestartMagnetSuccess = z.infer<typeof RestartMagnetSuccessSchema>;
+
+export const RestartMagnetErroredSchema = z.object({
+  magnet: z.string(),
+  error: z.object({
+    code: z.enum(["MAGNET_INVALID_ID", "MAGNET_PROCESSING"]),
+    message: z.string(),
+  }),
+});
+export type RestartMagnetErrored = z.infer<typeof RestartMagnetErroredSchema>;
+
+export const RestartMagnetBatchResponseSchema = z.object({
+  magnets: z.array(
+    z.union([RestartMagnetSuccessSchema, RestartMagnetErroredSchema]),
+  ),
+});
+export type RestartMagnetBatchResponse = z.infer<
+  typeof RestartMagnetBatchResponseSchema
+>;

@@ -45,7 +45,9 @@ const RequestPostOptionsSchema = z.object({
   requestType: z.literal("simplePost"),
   method: z.literal("POST"),
   headers: RequestHeadersSchema.optional(),
-  queryParams: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+  queryParams: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .optional(),
 });
 type RequestPostOptions = z.infer<typeof RequestPostOptionsSchema>;
 const RequestPostJsonOptionsSchema = RequestPostOptionsSchema.extend({
@@ -55,7 +57,10 @@ const RequestPostJsonOptionsSchema = RequestPostOptionsSchema.extend({
 type RequestPostJsonOptions = z.infer<typeof RequestPostJsonOptionsSchema>;
 const RequestPostFormDataOptionsSchema = RequestPostOptionsSchema.extend({
   requestType: z.literal("postFormData"),
-  formData: z.union([z.record(z.string(), z.unknown()), z.instanceof(FormData)]),
+  formData: z.union([
+    z.record(z.string(), z.unknown()),
+    z.instanceof(FormData),
+  ]),
 });
 type RequestPostFormDataOptions = z.infer<
   typeof RequestPostFormDataOptionsSchema
@@ -174,9 +179,7 @@ export class AlldebridHttpClient {
     options?: RequestGetOptions,
   ): Promise<Result<ParsedSuccessData<z.output<T>>, SdkError>> {
     const setupResult = this.baseRequestSetup(path, options?.headers);
-    if (!setupResult.ok) {
-      return setupResult;
-    }
+    if (!setupResult.ok) return setupResult;
 
     const { url, headers } = setupResult.data;
     const config: AxiosRequestConfig = {
@@ -198,9 +201,7 @@ export class AlldebridHttpClient {
       | RequestPostJsonOptions,
   ): Promise<Result<ParsedSuccessData<z.output<T>>, SdkError>> {
     const setupResult = this.baseRequestSetup(path, options?.headers);
-    if (!setupResult.ok) {
-      return setupResult;
-    }
+    if (!setupResult.ok) return setupResult;
 
     const { url, headers } = setupResult.data;
     let config: AxiosRequestConfig = {
