@@ -3,6 +3,16 @@ import { z } from "zod";
 import { AlldebridHttpClient } from "../../../src/sdk/core/http/client";
 import axios from "axios";
 
+interface MockedAxiosRequest {
+  mockResolvedValueOnce: (value: unknown) => MockedAxiosRequest;
+  mockRejectedValueOnce: (error: unknown) => MockedAxiosRequest;
+  mockResolvedValue: (value: unknown) => MockedAxiosRequest;
+  mockRejectedValue: (error: unknown) => MockedAxiosRequest;
+  mock: {
+    calls: unknown[][];
+  };
+}
+
 // Mock axios
 vi.mock("axios", () => ({
   default: {
@@ -57,7 +67,7 @@ describe("AlldebridHttpClient", () => {
   describe("GET Requests", () => {
     it("should perform successful GET request", async () => {
       const responseData = { data: { id: 1, name: "test" } };
-      (mockedAxios.request as any).mockResolvedValueOnce({
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: { status: "success", data: responseData.data },
       });
 
@@ -83,7 +93,7 @@ describe("AlldebridHttpClient", () => {
     });
 
     it("should handle GET request with query parameters", async () => {
-      (mockedAxios.request as any).mockResolvedValueOnce({
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: { status: "success", data: { result: "ok" } },
       });
 
@@ -104,7 +114,7 @@ describe("AlldebridHttpClient", () => {
 
   describe("POST Requests", () => {
     it("should perform successful POST request with JSON", async () => {
-      (mockedAxios.request as any).mockResolvedValueOnce({
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: { status: "success", data: { uploaded: true } },
       });
 
@@ -132,7 +142,7 @@ describe("AlldebridHttpClient", () => {
     });
 
     it("should perform successful POST request with FormData", async () => {
-      (mockedAxios.request as any).mockResolvedValueOnce({
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: { status: "success", data: { uploaded: true } },
       });
 
@@ -159,7 +169,7 @@ describe("AlldebridHttpClient", () => {
     });
 
     it("should perform simple POST request", async () => {
-      (mockedAxios.request as any).mockResolvedValueOnce({
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: { status: "success", data: { result: "ok" } },
       });
 
@@ -180,7 +190,7 @@ describe("AlldebridHttpClient", () => {
 
   describe("Error Handling", () => {
     it("should handle API errors", async () => {
-      (mockedAxios.request as any).mockResolvedValueOnce({
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: {
           status: "error",
           error: { code: "AUTH_REQUIRED", message: "Authentication required" },
@@ -202,7 +212,7 @@ describe("AlldebridHttpClient", () => {
     });
 
     it("should handle validation errors", async () => {
-      (mockedAxios.request as any).mockResolvedValueOnce({
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValueOnce({
         data: { invalid: "response" },
       });
 
@@ -224,7 +234,7 @@ describe("AlldebridHttpClient", () => {
         code: "ECONNRESET",
       });
 
-      (mockedAxios.request as any).mockRejectedValueOnce(networkError);
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValueOnce(networkError);
 
       const schema = z.object({});
       const result = await client.getRequest("/test", schema);
@@ -246,7 +256,7 @@ describe("AlldebridHttpClient", () => {
         response: { status: 500 },
       });
 
-      (mockedAxios.request as any).mockRejectedValueOnce(httpError);
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValueOnce(httpError);
 
       const schema = z.object({});
       const result = await client.getRequest("/test", schema);
@@ -266,7 +276,7 @@ describe("AlldebridHttpClient", () => {
       const httpError = Object.assign(new Error("Not Found"), {
         response: { status: 404 },
       });
-      (mockedAxios.request as any).mockRejectedValueOnce(httpError);
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValueOnce(httpError);
 
       const schema = z.object({});
       const result = await client.getRequest("/test", schema);
@@ -289,7 +299,7 @@ describe("AlldebridHttpClient", () => {
       });
 
       // Fail twice, then succeed
-      (mockedAxios.request as any)
+      (mockedAxios.request as unknown as MockedAxiosRequest)
         .mockRejectedValueOnce(networkError)
         .mockRejectedValueOnce(networkError)
         .mockResolvedValueOnce({
@@ -308,7 +318,7 @@ describe("AlldebridHttpClient", () => {
         code: "ETIMEDOUT",
       });
 
-      (mockedAxios.request as any).mockRejectedValue(networkError);
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValue(networkError);
 
       const schema = z.object({});
       const result = await client.getRequest("/test", schema);
@@ -323,7 +333,7 @@ describe("AlldebridHttpClient", () => {
         response: { status: 400 },
       });
 
-      (mockedAxios.request as any).mockRejectedValueOnce(httpError);
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockRejectedValueOnce(httpError);
 
       const schema = z.object({});
       const result = await client.getRequest("/test", schema);
@@ -335,7 +345,7 @@ describe("AlldebridHttpClient", () => {
 
   describe("Path Normalization", () => {
     it("should normalize paths correctly", async () => {
-      (mockedAxios.request as any).mockResolvedValue({
+      (mockedAxios.request as unknown as MockedAxiosRequest).mockResolvedValue({
         data: { status: "success", data: {} },
       });
 
@@ -344,11 +354,12 @@ describe("AlldebridHttpClient", () => {
       await client.getRequest("test/path", schema);
       await client.getRequest("///test/path", schema);
 
-      const calls = (mockedAxios.request as any).mock.calls;
-      calls.forEach((call: any) => {
-        expect(call[0].url).toContain("test/path");
+      const calls = (mockedAxios.request as unknown as MockedAxiosRequest).mock.calls;
+      calls.forEach((call: unknown[]) => {
+        const config = call[0] as { url: string };
+        expect(config.url).toContain("test/path");
         // All paths should end up as the same normalized path
-        expect(call[0].url).toMatch(/\/test\/path$/);
+        expect(config.url).toMatch(/\/test\/path$/);
       });
     });
   });

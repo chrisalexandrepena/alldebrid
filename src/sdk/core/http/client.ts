@@ -34,28 +34,28 @@ const RequestHeadersSchema = z.record(
     z.literal("Authorization"),
     z.string(),
   ]),
-  z.any(),
+  z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 type RequestGetOptions = {
   method: "GET";
-  headers?: Record<string, any>;
-  queryParams?: Record<string, any>;
+  headers?: Record<string, string | number | boolean>;
+  queryParams?: Record<string, string | number | boolean>;
 };
 const RequestPostOptionsSchema = z.object({
   requestType: z.literal("simplePost"),
   method: z.literal("POST"),
   headers: RequestHeadersSchema.optional(),
-  queryParams: z.record(z.string(), z.any()).optional(),
+  queryParams: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
 });
 type RequestPostOptions = z.infer<typeof RequestPostOptionsSchema>;
 const RequestPostJsonOptionsSchema = RequestPostOptionsSchema.extend({
   requestType: z.literal("postJson"),
-  json: z.record(z.string(), z.any()),
+  json: z.record(z.string(), z.unknown()),
 });
 type RequestPostJsonOptions = z.infer<typeof RequestPostJsonOptionsSchema>;
 const RequestPostFormDataOptionsSchema = RequestPostOptionsSchema.extend({
   requestType: z.literal("postFormData"),
-  formData: z.union([z.record(z.string(), z.any()), z.instanceof(FormData)]),
+  formData: z.union([z.record(z.string(), z.unknown()), z.instanceof(FormData)]),
 });
 type RequestPostFormDataOptions = z.infer<
   typeof RequestPostFormDataOptionsSchema
@@ -135,7 +135,7 @@ export class AlldebridHttpClient {
     } catch (error) {
       const networkError = createNetworkError(
         error as Error,
-        (error as any)?.response?.status,
+        (error as { response?: { status?: number } })?.response?.status,
       );
 
       if (retryCount < this.retries && networkError.retryable) {

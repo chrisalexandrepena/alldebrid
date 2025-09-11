@@ -116,7 +116,7 @@ function isRetryableHttpError(error: Error, statusCode?: number): boolean {
     return statusCode >= 500 || statusCode === 429;
   }
 
-  const axiosLikeError = error as any;
+  const axiosLikeError = error as { code?: string };
   return (
     axiosLikeError.code === "ECONNRESET" ||
     axiosLikeError.code === "ETIMEDOUT" ||

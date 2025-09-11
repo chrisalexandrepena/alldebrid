@@ -1,4 +1,4 @@
-import { z, type ZodError } from "zod";
+import { z } from "zod";
 import { 
   type Result, 
   type SdkError, 
@@ -15,7 +15,6 @@ const AlldebridErrorSchema = z.object({
   code: z.string(),
   message: z.string(),
 });
-type AlldebridErrorType = z.infer<typeof AlldebridErrorSchema>;
 
 /** Error envelope according to docs. */
 export const ApiErrorEnvelopeSchema = z.object({
