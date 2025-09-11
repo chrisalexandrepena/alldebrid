@@ -6,7 +6,7 @@ import {
   type MagnetListedExpired,
   type MagnetListedReady,
   type MagnetReady,
-  RestartMagnetSuccess,
+  type RestartMagnetSuccess,
   type UploadedFile,
   type UploadedMagnet,
 } from "../../src/sdk/resources/magnets/types";
@@ -18,7 +18,6 @@ describe("magnets e2e test", () => {
   let client: Alldebrid;
   beforeAll(() => {
     client = new Alldebrid({
-      // apiKey: "E1ws4Mpefm2evyGrXONe",
       apiKey: "staticDemoApikeyPrem",
       logLevel: "debug",
       timeout: 30000,
