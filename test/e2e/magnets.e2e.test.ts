@@ -6,8 +6,8 @@ import {
   type MagnetListedExpired,
   type MagnetListedReady,
   type MagnetReady,
-  type UploadedFileSuccess,
-  type UploadedMagnetSuccess,
+  type UploadedFile,
+  type UploadedMagnet,
 } from "../../src/sdk/resources/magnets/types";
 import { Alldebrid } from "../../src";
 import * as fs from "node:fs";
@@ -28,53 +28,65 @@ describe("magnets e2e test", () => {
     it("Should return all ready magnets", async () => {
       const response = await client.magnet.list("ready");
       expect(response.ok).toEqual(true);
-      expectTypeOf(response.data).toEqualTypeOf<MagnetListedReady[]>();
-      expect(response.data.length).toBeGreaterThan(0);
+      if (response.ok) {
+        expectTypeOf(response.data).toEqualTypeOf<MagnetListedReady[]>();
+        expect(response.data.length).toBeGreaterThan(0);
+      }
     });
     it("Should return all errored magnets", async () => {
       const response = await client.magnet.list("error");
       expect(response.ok).toEqual(true);
-      expectTypeOf(response).toEqualTypeOf<MagnetListedError[]>();
-      expect(response.data.length).toBeGreaterThan(0);
+      if (response.ok) {
+        expectTypeOf(response.data).toEqualTypeOf<MagnetListedError[]>();
+        expect(response.data.length).toBeGreaterThan(0);
+      }
     });
     it("Should return all expired magnets", async () => {
       const response = await client.magnet.list("expired");
       expect(response.ok).toEqual(true);
-      expectTypeOf(response).toEqualTypeOf<MagnetListedExpired[]>();
-      expect(response.data.length).toBeGreaterThan(0);
+      if (response.ok) {
+        expectTypeOf(response.data).toEqualTypeOf<MagnetListedExpired[]>();
+        expect(response.data.length).toBeGreaterThan(0);
+      }
     });
   });
 
   describe("get magnet", () => {
     it("Should return a detailed ready magnet file", async () => {
       const readyMagnets = await client.magnet.list("ready");
-      if (!readyMagnets.data[0]) throw new Error("Demo magnet list is empty");
+      if (!readyMagnets.ok || !readyMagnets.data[0]) throw new Error("Demo magnet list is empty");
       const response = await client.magnet.get(
         readyMagnets.data[0].id,
         "ready",
       );
       expect(response.ok).toEqual(true);
-      expectTypeOf(response.data).toEqualTypeOf<MagnetReady>();
+      if (response.ok) {
+        expectTypeOf(response.data).toEqualTypeOf<MagnetReady>();
+      }
     });
     it("Should return a detailed errored magnet file", async () => {
       const erroredMagnets = await client.magnet.list("error");
-      if (!erroredMagnets.data[0]) throw new Error("Demo magnet list is empty");
+      if (!erroredMagnets.ok || !erroredMagnets.data[0]) throw new Error("Demo magnet list is empty");
       const response = await client.magnet.get(
         erroredMagnets.data[0].id,
         "error",
       );
       expect(response.ok).toEqual(true);
-      expectTypeOf(response.data).toEqualTypeOf<MagnetError>();
+      if (response.ok) {
+        expectTypeOf(response.data).toEqualTypeOf<MagnetError>();
+      }
     });
     it("Should return a detailed expired magnet file", async () => {
       const expiredMagnets = await client.magnet.list("expired");
-      if (!expiredMagnets.data[0]) throw new Error("Demo magnet list is empty");
+      if (!expiredMagnets.ok || !expiredMagnets.data[0]) throw new Error("Demo magnet list is empty");
       const response = await client.magnet.get(
         expiredMagnets.data[0].id,
         "expired",
       );
       expect(response.ok).toEqual(true);
-      expectTypeOf(response.data).toEqualTypeOf<MagnetExpired>();
+      if (response.ok) {
+        expectTypeOf(response.data).toEqualTypeOf<MagnetExpired>();
+      }
     });
   });
 
@@ -83,7 +95,10 @@ describe("magnets e2e test", () => {
       const response = await client.magnet.upload(
         "magnet:?xt=urn:btih:842783e3005495d5d1637f5364b59343c7844707&dn=ubuntu-18.04.2-live-server-amd64.iso",
       );
-      expectTypeOf(response).toEqualTypeOf<UploadedMagnetSuccess>();
+      expect(response.ok).toEqual(true);
+      if (response.ok) {
+        expectTypeOf(response.data).toEqualTypeOf<UploadedMagnet>();
+      }
     });
     it("Should return a uploaded torrent file result", async () => {
       const fileBuffer = fs.readFileSync(
@@ -94,7 +109,10 @@ describe("magnets e2e test", () => {
         fileName: "findingnemo.torrent",
         blob,
       });
-      expectTypeOf(response).toEqualTypeOf<UploadedFileSuccess>();
+      expect(response.ok).toEqual(true);
+      if (response.ok) {
+        expectTypeOf(response.data).toEqualTypeOf<UploadedFile>();
+      }
     });
   });
 });
