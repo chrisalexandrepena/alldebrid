@@ -1,11 +1,8 @@
 import { describe, it, beforeAll, expectTypeOf, expect } from "vitest";
 import {
   type LinkInfo,
-  type RedirectorResponse,
   type DebridLinkResponse,
-  type StreamingLinksResponse,
-  type DelayedLinkResponse,
-  LinkInfoError,
+  type LinkInfoError,
 } from "../../src/sdk/resources/links/types";
 import { Alldebrid, ApiError } from "../../src";
 
