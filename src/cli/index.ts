@@ -242,6 +242,61 @@ async function main() {
       }
     });
 
+  userCmd
+    .command("saved-links-list")
+    .description("List saved links")
+    .action(async () => {
+      try {
+        const client = createClient();
+        const links = await client.user.listSavedLinks();
+        const format = getOutputFormat();
+        console.log(formatOutput(links, format));
+      } catch (error) {
+        console.error(
+          chalk.red("Error:"),
+          error instanceof Error ? error.message : error,
+        );
+        process.exit(1);
+      }
+    });
+
+  userCmd
+    .command("saved-links-save")
+    .description("Save links")
+    .argument("<links...>", "Links to save")
+    .action(async (links: string[]) => {
+      try {
+        const client = createClient();
+        const result = await client.user.saveLinks(links);
+        const format = getOutputFormat();
+        console.log(formatOutput(result, format));
+      } catch (error) {
+        console.error(
+          chalk.red("Error:"),
+          error instanceof Error ? error.message : error,
+        );
+        process.exit(1);
+      }
+    });
+
+  userCmd
+    .command("recent-links-list")
+    .description("List recent links")
+    .action(async () => {
+      try {
+        const client = createClient();
+        const links = await client.user.listRecentLinks();
+        const format = getOutputFormat();
+        console.log(formatOutput(links, format));
+      } catch (error) {
+        console.error(
+          chalk.red("Error:"),
+          error instanceof Error ? error.message : error,
+        );
+        process.exit(1);
+      }
+    });
+
   // Hosts command
   program
     .command("hosts")
@@ -269,12 +324,34 @@ async function main() {
   magnetCmd
     .command("list")
     .description("List your magnets")
-    .action(async () => {
+    .option("-s, --status <status>", "Filter by status (active|ready|expired|error)")
+    .action(async (options) => {
       try {
         const client = createClient();
-        const magnets = await client.magnet.list();
+        const magnets = options.status 
+          ? await client.magnet.list(options.status as any)
+          : await client.magnet.list();
         const format = getOutputFormat();
         console.log(formatOutput(magnets, format));
+      } catch (error) {
+        console.error(
+          chalk.red("Error:"),
+          error instanceof Error ? error.message : error,
+        );
+        process.exit(1);
+      }
+    });
+
+  magnetCmd
+    .command("get")
+    .description("Get specific magnet details")
+    .argument("<id>", "Magnet ID to get details for", parseInt)
+    .action(async (id: number) => {
+      try {
+        const client = createClient();
+        const magnet = await client.magnet.get(id);
+        const format = getOutputFormat();
+        console.log(formatOutput(magnet, format));
       } catch (error) {
         console.error(
           chalk.red("Error:"),
@@ -345,6 +422,26 @@ async function main() {
   const linkCmd = program.command("link").description("Link-related commands");
 
   linkCmd
+    .command("info")
+    .description("Get link information")
+    .argument("<url>", "URL to get info for")
+    .option("-p, --password <password>", "Password for protected links")
+    .action(async (url: string, options) => {
+      try {
+        const client = createClient();
+        const result = await client.link.getInfo(url, options.password);
+        const format = getOutputFormat();
+        console.log(formatOutput(result, format));
+      } catch (error) {
+        console.error(
+          chalk.red("Error:"),
+          error instanceof Error ? error.message : error,
+        );
+        process.exit(1);
+      }
+    });
+
+  linkCmd
     .command("unlock")
     .description("Unlock a premium link")
     .argument("<url>", "URL to unlock")
@@ -354,6 +451,43 @@ async function main() {
         const result = await client.link.debrid(url);
         const format = getOutputFormat();
         console.log(formatOutput(result, format));
+      } catch (error) {
+        console.error(
+          chalk.red("Error:"),
+          error instanceof Error ? error.message : error,
+        );
+        process.exit(1);
+      }
+    });
+
+  // Additional host commands
+  program
+    .command("host-domains")
+    .description("List host domains")
+    .action(async () => {
+      try {
+        const client = createClient();
+        const domains = await client.host.listDomains();
+        const format = getOutputFormat();
+        console.log(formatOutput(domains, format));
+      } catch (error) {
+        console.error(
+          chalk.red("Error:"),
+          error instanceof Error ? error.message : error,
+        );
+        process.exit(1);
+      }
+    });
+
+  program
+    .command("host-priorities")
+    .description("List host priorities")
+    .action(async () => {
+      try {
+        const client = createClient();
+        const priorities = await client.host.listHostPriorities();
+        const format = getOutputFormat();
+        console.log(formatOutput(priorities, format));
       } catch (error) {
         console.error(
           chalk.red("Error:"),
