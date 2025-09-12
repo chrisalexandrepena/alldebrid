@@ -4,13 +4,18 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import * as yaml from "js-yaml";
+import chalk from "chalk";
 import { DEFAULT_BASE_URL } from "../sdk/core/http/client";
 
 type CliConfig = {
   ALLDEBRID_API_KEY?: string;
   BASE_URL?: string;
   LOG_LEVEL?: "error" | "fatal" | "warn" | "info" | "debug" | "trace";
+  OUTPUT_FORMAT?: "text" | "json" | "yaml";
 };
+
+type OutputFormat = "text" | "json" | "yaml";
+
 
 function loadConfig(): CliConfig {
   // Config file locations in order of preference
@@ -44,18 +49,120 @@ function loadConfig(): CliConfig {
   return {};
 }
 
+function formatOutput(data: unknown, format: OutputFormat): string {
+  switch (format) {
+    case "json":
+      return JSON.stringify(data, null, 2);
+    case "yaml":
+      return yaml.dump(data, { indent: 2, lineWidth: -1 });
+    case "text":
+    default:
+      if (typeof data === "object" && data !== null) {
+        return formatAsText(data);
+      }
+      return String(data);
+  }
+}
+
+function formatAsText(data: unknown): string {
+  if (Array.isArray(data)) {
+    if (data.length === 0) return chalk.yellow("No items found.");
+    
+    // For arrays, create a cleaner table-like format with colors
+    return data.map((item, index) => {
+      if (typeof item === "object" && item !== null) {
+        const formatted = formatAsText(item);
+        const separator = chalk.blue("=".repeat(50));
+        const itemNumber = chalk.bold.cyan(`[${index + 1}]`);
+        return `\n${separator}\n${itemNumber}\n${separator}\n${formatted}`;
+      }
+      return `${chalk.cyan(`${index + 1}.`)} ${formatAsText(item)}`;
+    }).join("\n\n");
+  }
+  
+  if (typeof data === "object" && data !== null) {
+    // Handle DateTime objects from Luxon
+    if ('toISO' in data && typeof data.toISO === 'function') {
+      return (data as any).toISO();
+    }
+    
+    // Handle Date objects
+    if (data instanceof Date) {
+      return data.toISOString();
+    }
+    
+    const entries = Object.entries(data as Record<string, unknown>);
+    return entries
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => {
+        const formattedKey = key.replace(/([A-Z])/g, " $1")
+          .replace(/^./, str => str.toUpperCase())
+          .trim();
+        
+        if (typeof value === "object" && value !== null) {
+          // Handle DateTime/Date objects inline
+          if ('toISO' in value && typeof (value as any).toISO === 'function') {
+            return `${chalk.bold.green(formattedKey)}: ${chalk.magenta((value as any).toISO())}`;
+          }
+          if (value instanceof Date) {
+            return `${chalk.bold.green(formattedKey)}: ${chalk.magenta(value.toISOString())}`;
+          }
+          return `${chalk.bold.green(formattedKey)}:\n${formatAsText(value).split('\n').map(line => `  ${line}`).join('\n')}`;
+        }
+        
+        // Add colors based on value type
+        let coloredValue;
+        if (typeof value === 'boolean') {
+          coloredValue = value ? chalk.green('true') : chalk.red('false');
+        } else if (typeof value === 'number') {
+          coloredValue = chalk.yellow(String(value));
+        } else if (typeof value === 'string') {
+          // Color URLs differently
+          if (value.startsWith('http')) {
+            coloredValue = chalk.blue.underline(value);
+          } else {
+            coloredValue = chalk.white(value);
+          }
+        } else {
+          coloredValue = chalk.gray(String(value));
+        }
+        
+        return `${chalk.bold.green(formattedKey)}: ${coloredValue}`;
+      })
+      .join("\n");
+  }
+  
+  return String(data);
+}
+
+function getOutputFormat(): OutputFormat {
+  const config = loadConfig();
+  return program.opts().format || config.OUTPUT_FORMAT || "text";
+}
+
+function getApiKey(): string {
+  const config = loadConfig();
+  return program.opts().apiKey || process.env.ALLDEBRID_API_KEY || config.ALLDEBRID_API_KEY || "";
+}
+
 function createClient(): Alldebrid {
   const config = loadConfig();
-  const apiKey = process.env.ALLDEBRID_API_KEY || config.ALLDEBRID_API_KEY;
+  const apiKey = getApiKey();
 
   if (!apiKey) {
-    console.error(`Error: API key required.
-Options:
-1. Set ALLDEBRID_API_KEY environment variable
-2. Create a config file at one of these locations:
-   - ~/.config/alldebrid/config.yml (recommended)
-   - %APPDATA%/alldebrid/config.yml (Windows)
-   - ~/.alldebrid/config.yml`);
+    console.error(chalk.red.bold('Error: API key required.\n'));
+    console.error(chalk.yellow('Options (in order of priority):'));
+    console.error(chalk.cyan('1. Use --api-key flag: ') + chalk.white('alldebrid --api-key YOUR_KEY user info'));
+    console.error(chalk.cyan('2. Set ALLDEBRID_API_KEY environment variable'));
+    console.error(chalk.cyan('3. Create a config file at one of these locations:'));
+    console.error(chalk.gray('   - ~/.config/alldebrid/config.yml (recommended)'));
+    console.error(chalk.gray('   - %APPDATA%/alldebrid/config.yml (Windows)'));
+    console.error(chalk.gray('   - ~/.alldebrid/config.yml\n'));
+    console.error(chalk.yellow('Config file format (YAML):'));
+    console.error(chalk.green('ALLDEBRID_API_KEY: ') + chalk.white('your-api-key-here'));
+    console.error(chalk.green('BASE_URL: ') + chalk.gray('https://api.alldebrid.com/v4  # optional'));
+    console.error(chalk.green('LOG_LEVEL: ') + chalk.gray('error  # optional'));
+    console.error(chalk.green('OUTPUT_FORMAT: ') + chalk.gray('text  # optional (text|json|yaml)'));
     process.exit(1);
   }
 
@@ -70,7 +177,9 @@ async function main() {
   program
     .name("alldebrid")
     .description("AllDebrid CLI - Command line interface for AllDebrid")
-    .version("2.0.0");
+    .version("2.0.0")
+    .option("-f, --format <format>", "Output format (text|json|yaml)")
+    .option("-k, --api-key <key>", "AllDebrid API key");
 
   // User commands
   const userCmd = program.command("user").description("User-related commands");
@@ -82,9 +191,10 @@ async function main() {
       try {
         const client = createClient();
         const user = await client.user.get();
-        console.log(JSON.stringify(user, null, 2));
+        const format = getOutputFormat();
+        console.log(formatOutput(user, format));
       } catch (error) {
-        console.error("Error:", error instanceof Error ? error.message : error);
+        console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -96,9 +206,10 @@ async function main() {
       try {
         const client = createClient();
         const hosts = await client.user.getHosts();
-        console.log(JSON.stringify(hosts, null, 2));
+        const format = getOutputFormat();
+        console.log(formatOutput(hosts, format));
       } catch (error) {
-        console.error("Error:", error instanceof Error ? error.message : error);
+        console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -111,9 +222,10 @@ async function main() {
       try {
         const client = createClient();
         const hosts = await client.host.list();
-        console.log(JSON.stringify(hosts, null, 2));
+        const format = getOutputFormat();
+        console.log(formatOutput(hosts, format));
       } catch (error) {
-        console.error("Error:", error instanceof Error ? error.message : error);
+        console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -130,9 +242,10 @@ async function main() {
       try {
         const client = createClient();
         const magnets = await client.magnet.list();
-        console.log(JSON.stringify(magnets, null, 2));
+        const format = getOutputFormat();
+        console.log(formatOutput(magnets, format));
       } catch (error) {
-        console.error("Error:", error instanceof Error ? error.message : error);
+        console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -145,9 +258,10 @@ async function main() {
       try {
         const client = createClient();
         const result = await client.magnet.upload([magnet]);
-        console.log(JSON.stringify(result, null, 2));
+        const format = getOutputFormat();
+        console.log(formatOutput(result, format));
       } catch (error) {
-        console.error("Error:", error instanceof Error ? error.message : error);
+        console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -160,9 +274,10 @@ async function main() {
       try {
         const client = createClient();
         const result = await client.magnet.delete(id);
-        console.log(JSON.stringify(result, null, 2));
+        const format = getOutputFormat();
+        console.log(formatOutput(result, format));
       } catch (error) {
-        console.error("Error:", error instanceof Error ? error.message : error);
+        console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -175,9 +290,10 @@ async function main() {
       try {
         const client = createClient();
         const result = await client.magnet.restart(id);
-        console.log(JSON.stringify(result, null, 2));
+        const format = getOutputFormat();
+        console.log(formatOutput(result, format));
       } catch (error) {
-        console.error("Error:", error instanceof Error ? error.message : error);
+        console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
@@ -193,9 +309,10 @@ async function main() {
       try {
         const client = createClient();
         const result = await client.link.debrid(url);
-        console.log(JSON.stringify(result, null, 2));
+        const format = getOutputFormat();
+        console.log(formatOutput(result, format));
       } catch (error) {
-        console.error("Error:", error instanceof Error ? error.message : error);
+        console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
         process.exit(1);
       }
     });
