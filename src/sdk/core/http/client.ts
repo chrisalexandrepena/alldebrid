@@ -36,7 +36,7 @@ const RequestHeadersSchema = z.record(
   z.union([z.string(), z.number(), z.boolean(), z.null()]),
 );
 type RequestGetOptions = {
-  method: "GET";
+  method?: "GET";
   headers?: Record<string, string | number | boolean>;
   queryParams?: Record<string, string | number | boolean>;
   publicEndpoint?: boolean;

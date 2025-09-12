@@ -1,13 +1,26 @@
 import { z } from "zod";
 
 // LINK INFO
-export const LinkInfoSchema = z.object({
+export const LinkInfoSuccessSchema = z.object({
   link: z.url(),
   filename: z.string(),
   size: z.int(),
   host: z.string(),
-  hostDomain: z.url(),
+  hostDomain: z.string(),
 });
+export type LinkInfoSuccess = z.infer<typeof LinkInfoSuccessSchema>;
+export const LinkInfoErrorSchema = z.object({
+  link: z.url(),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+  }),
+});
+export type LinkInfoError = z.infer<typeof LinkInfoErrorSchema>;
+export const LinkInfoSchema = z.union([
+  LinkInfoSuccessSchema,
+  LinkInfoErrorSchema,
+]);
 export type LinkInfo = z.infer<typeof LinkInfoSchema>;
 
 // UNLOCK LINK
@@ -30,7 +43,7 @@ export const DebridLinkResponseSchema = z.object({
   paws: z.boolean().optional(),
   filesize: z.int(),
   id: z.string(),
-  hostDomain: z.url(),
+  hostDomain: z.string(),
   delayed: z.int().optional(),
 });
 export type DebridLinkResponse = z.infer<typeof DebridLinkResponseSchema>;

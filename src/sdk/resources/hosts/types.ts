@@ -6,6 +6,7 @@ export const HostSchema = z.object({
   type: z.enum(["premium", "free"]),
   domains: z.array(z.string()),
   regexps: z.array(z.string()),
+  regexp: z.union([z.string(), z.array(z.string())]),
   status: z.boolean().optional(),
 });
 export type Host = z.infer<typeof HostSchema>;
