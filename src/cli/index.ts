@@ -1,22 +1,44 @@
-import { Command } from "commander";
+import { program } from "commander";
 import { Alldebrid } from "../sdk";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import * as yaml from "js-yaml";
+import { DEFAULT_BASE_URL } from "../sdk/core/http/client";
 
-interface CliConfig {
-  apiKey?: string;
-  agent?: string;
-  baseUrl?: string;
-}
+type CliConfig = {
+  ALLDEBRID_API_KEY?: string;
+  BASE_URL?: string;
+  LOG_LEVEL?: "error" | "fatal" | "warn" | "info" | "debug" | "trace";
+};
 
 function loadConfig(): CliConfig {
-  const configPath = join(homedir(), ".alldebrid");
-  if (existsSync(configPath)) {
-    try {
-      return JSON.parse(readFileSync(configPath, "utf8"));
-    } catch {
-      // Ignore config file errors
+  // Config file locations in order of preference
+  const XDG_CONFIG_HOME =
+    process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
+  const configPaths = [
+    // XDG config directory (Linux/Unix standard)
+    join(XDG_CONFIG_HOME, "alldebrid", "config.yml"),
+    join(XDG_CONFIG_HOME, "alldebrid", "config.yaml"),
+    join(homedir(), ".alldebrid.yml"),
+    join(homedir(), ".alldebrid.yaml"),
+    join(homedir(), ".alldebrid", "config.yml"),
+    join(homedir(), ".alldebrid", "config.yaml"),
+    // Application data directory (Windows)
+    process.env.APPDATA
+      ? join(process.env.APPDATA, "alldebrid", "config.yml")
+      : null,
+  ].filter(Boolean) as string[];
+
+  for (const configPath of configPaths) {
+    if (existsSync(configPath)) {
+      try {
+        const content = readFileSync(configPath, "utf8");
+        // Try YAML first, fallback to JSON for legacy support
+        return yaml.load(content) as CliConfig;
+      } catch {
+        // Ignore config file errors and try next location
+      }
     }
   }
   return {};
@@ -24,33 +46,34 @@ function loadConfig(): CliConfig {
 
 function createClient(): Alldebrid {
   const config = loadConfig();
-  const apiKey = process.env.ALLDEBRID_API_KEY || config.apiKey;
-  
+  const apiKey = process.env.ALLDEBRID_API_KEY || config.ALLDEBRID_API_KEY;
+
   if (!apiKey) {
-    console.error("Error: API key required. Set ALLDEBRID_API_KEY environment variable or create ~/.alldebrid config file.");
+    console.error(`Error: API key required.
+Options:
+1. Set ALLDEBRID_API_KEY environment variable
+2. Create a config file at one of these locations:
+   - ~/.config/alldebrid/config.yml (recommended)
+   - %APPDATA%/alldebrid/config.yml (Windows)
+   - ~/.alldebrid/config.yml`);
     process.exit(1);
   }
 
   return new Alldebrid({
     apiKey,
-    agent: config.agent || "alldebrid-cli",
-    baseUrl: config.baseUrl,
-    logLevel: "error"
+    baseUrl: config.BASE_URL ?? DEFAULT_BASE_URL,
+    logLevel: config.LOG_LEVEL ?? "error",
   });
 }
 
 async function main() {
-  const program = new Command();
-  
   program
     .name("alldebrid")
     .description("AllDebrid CLI - Command line interface for AllDebrid")
     .version("2.0.0");
 
   // User commands
-  const userCmd = program
-    .command("user")
-    .description("User-related commands");
+  const userCmd = program.command("user").description("User-related commands");
 
   userCmd
     .command("info")
@@ -136,7 +159,7 @@ async function main() {
     .action(async (id: number) => {
       try {
         const client = createClient();
-        const result = await client.magnet.delete([id]);
+        const result = await client.magnet.delete(id);
         console.log(JSON.stringify(result, null, 2));
       } catch (error) {
         console.error("Error:", error instanceof Error ? error.message : error);
@@ -151,7 +174,7 @@ async function main() {
     .action(async (id: number) => {
       try {
         const client = createClient();
-        const result = await client.magnet.restart([id]);
+        const result = await client.magnet.restart(id);
         console.log(JSON.stringify(result, null, 2));
       } catch (error) {
         console.error("Error:", error instanceof Error ? error.message : error);
@@ -160,9 +183,7 @@ async function main() {
     });
 
   // Link commands
-  const linkCmd = program
-    .command("link")
-    .description("Link-related commands");
+  const linkCmd = program.command("link").description("Link-related commands");
 
   linkCmd
     .command("unlock")
@@ -171,7 +192,7 @@ async function main() {
     .action(async (url: string) => {
       try {
         const client = createClient();
-        const result = await client.link.unlock(url);
+        const result = await client.link.debrid(url);
         console.log(JSON.stringify(result, null, 2));
       } catch (error) {
         console.error("Error:", error instanceof Error ? error.message : error);
