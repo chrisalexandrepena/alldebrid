@@ -6,15 +6,13 @@ import { homedir } from "os";
 import * as yaml from "js-yaml";
 import chalk from "chalk";
 import { DEFAULT_BASE_URL } from "../sdk/core/http/client";
-
-type CliConfig = {
-  ALLDEBRID_API_KEY?: string;
-  BASE_URL?: string;
-  LOG_LEVEL?: "error" | "fatal" | "warn" | "info" | "debug" | "trace";
-  OUTPUT_FORMAT?: "text" | "json" | "yaml";
-};
-
-type OutputFormat = "text" | "json" | "yaml";
+import {
+  type CliConfig,
+  type OutputFormat,
+  validateConfig,
+  validateOutputFormat,
+  validateMagnetStatus,
+} from "./validation";
 
 function loadConfig(): CliConfig {
   // Config file locations in order of preference
@@ -38,9 +36,9 @@ function loadConfig(): CliConfig {
     if (existsSync(configPath)) {
       try {
         const content = readFileSync(configPath, "utf8");
-        // Try YAML first, fallback to JSON for legacy support
-        return yaml.load(content) as CliConfig;
-      } catch {
+        const rawConfig = yaml.load(content);
+        return validateConfig(rawConfig, configPath);
+      } catch (error) {
         // Ignore config file errors and try next location
       }
     }
@@ -142,7 +140,8 @@ function formatAsText(data: unknown): string {
 
 function getOutputFormat(): OutputFormat {
   const config = loadConfig();
-  return program.opts().format || config.OUTPUT_FORMAT || "text";
+  const format = program.opts().format || config.OUTPUT_FORMAT || "text";
+  return validateOutputFormat(format);
 }
 
 function getApiKey(): string {
@@ -324,13 +323,39 @@ async function main() {
   magnetCmd
     .command("list")
     .description("List your magnets")
-    .option("-s, --status <status>", "Filter by status (active|ready|expired|error)")
+    .option(
+      "-s, --status <status>",
+      "Filter by status (active|ready|expired|error)",
+    )
     .action(async (options) => {
       try {
         const client = createClient();
-        const magnets = options.status 
-          ? await client.magnet.list(options.status as any)
-          : await client.magnet.list();
+
+        let magnets;
+        if (options.status) {
+          const validStatus = validateMagnetStatus(options.status);
+          // TypeScript needs explicit handling due to method overloads
+          switch (validStatus) {
+            case "active":
+              magnets = await client.magnet.list("active");
+              break;
+            case "ready":
+              magnets = await client.magnet.list("ready");
+              break;
+            case "expired":
+              magnets = await client.magnet.list("expired");
+              break;
+            case "error":
+              magnets = await client.magnet.list("error");
+              break;
+            default:
+              // This should never happen due to validation
+              throw new Error(`Invalid status: ${validStatus}`);
+          }
+        } else {
+          magnets = await client.magnet.list();
+        }
+
         const format = getOutputFormat();
         console.log(formatOutput(magnets, format));
       } catch (error) {
