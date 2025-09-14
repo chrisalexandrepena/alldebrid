@@ -6,8 +6,8 @@ permissions:
 on:
   pull_request:
     branches: [main, next]
-  push:
-    branches: [main, next]
+    paths-ignore:
+      - '.github/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
