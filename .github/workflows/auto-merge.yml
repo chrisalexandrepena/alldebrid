@@ -49,7 +49,23 @@ jobs:
             }
 
             while (true) {
-              const checks = await getChecks();
+              // Fetch checks and exclude this job's own check run to avoid
+              // waiting on itself (which would never complete until the loop breaks)
+              const allChecks = await getChecks();
+
+              const runId = context.runId || context.run_id; // github-script exposes runId
+              const jobName = context.job; // e.g. 'auto-merge'
+              const workflowName = context.workflow; // e.g. 'Auto-merge Dependabot PRs'
+
+              const checks = allChecks.filter(c => {
+                const isGhActions = c.app && c.app.slug === 'github-actions';
+                const details = c.details_url || '';
+                const isSameRun = runId ? details.includes(`/runs/${runId}/`) : false;
+                const isSameName = c.name === `${workflowName} / ${jobName}` || c.name === jobName;
+                // Exclude this job's own check run
+                return !(isGhActions && (isSameRun || isSameName));
+              });
+
               const hasAny = checks.length > 0;
               const pending = checks.filter(c => ['queued', 'in_progress'].includes(c.status));
               const failed = checks.filter(c => ['failure', 'cancelled', 'timed_out', 'action_required'].includes(c.conclusion || ''));
