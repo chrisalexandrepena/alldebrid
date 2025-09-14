@@ -52,7 +52,7 @@ const unlocked = await client.link.debrid("https://example.com/file");
 ```bash
 # Set API key (one of these methods)
 export ALLDEBRID_API_KEY="your-api-key"
-alldebrid --api-key "your-api-key" user info
+alldebrid --apikey "your-api-key" user info
 # or create config file (see Configuration section)
 
 # User commands

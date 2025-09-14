@@ -15,7 +15,7 @@ pnpm add -g alldebrid
 ### Authentication
 ```bash
 # Priority order: flag > env variable > config file
-alldebrid --api-key YOUR_KEY user info           # Highest priority
+alldebrid --apikey YOUR_KEY user info           # Highest priority
 export ALLDEBRID_API_KEY=YOUR_KEY; alldebrid user info  # Medium priority  
 # Config file (lowest priority) - see Configuration Guide
 ```
