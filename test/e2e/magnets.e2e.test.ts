@@ -48,19 +48,19 @@ describe("magnets e2e test", () => {
       const readyMagnets = await client.magnet.list("ready");
       if (!readyMagnets[0]) throw new Error("Demo magnet list is empty");
       const response = await client.magnet.get(readyMagnets[0].id);
-      expectTypeOf(response).toEqualTypeOf<MagnetReady>();
+      expectTypeOf(response as MagnetReady).toEqualTypeOf<MagnetReady>();
     });
     it("Should return a detailed errored magnet file", async () => {
       const erroredMagnets = await client.magnet.list("error");
       if (!erroredMagnets[0]) throw new Error("Demo magnet list is empty");
       const response = await client.magnet.get(erroredMagnets[0].id);
-      expectTypeOf(response).toEqualTypeOf<MagnetError>();
+      expectTypeOf(response as MagnetError).toEqualTypeOf<MagnetError>();
     });
     it("Should return a detailed expired magnet file", async () => {
       const expiredMagnets = await client.magnet.list("expired");
       if (!expiredMagnets[0]) throw new Error("Demo magnet list is empty");
       const response = await client.magnet.get(expiredMagnets[0].id);
-      expectTypeOf(response).toEqualTypeOf<MagnetExpired>();
+      expectTypeOf(response as MagnetExpired).toEqualTypeOf<MagnetExpired>();
     });
   });
 
@@ -122,7 +122,9 @@ describe("magnets e2e test", () => {
     it("Should handle restart for demo (returns success)", async () => {
       const response = await client.magnet.restart(999999999);
       expect(response).toBeDefined();
-      expectTypeOf(response).toEqualTypeOf<RestartMagnetSuccess>();
+      expectTypeOf(
+        response as RestartMagnetSuccess,
+      ).toEqualTypeOf<RestartMagnetSuccess>();
     });
   });
 

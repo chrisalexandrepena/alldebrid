@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { program } from "commander";
 import { Alldebrid } from "../sdk";
 import { existsSync, readFileSync } from "fs";
@@ -14,6 +15,18 @@ import {
   validateMagnetStatus,
 } from "./validation";
 import { version } from "../../package.json";
+
+interface ObjectWithISOMethod {
+  toISO: () => string;
+}
+function hasToISOMethod(x: unknown): x is ObjectWithISOMethod {
+  const r = z
+    .object({
+      toISO: z.function(),
+    })
+    .safeParse(x);
+  return r.success;
+}
 
 function loadConfig(): CliConfig {
   // Config file locations in order of preference
@@ -39,7 +52,7 @@ function loadConfig(): CliConfig {
         const content = readFileSync(configPath, "utf8");
         const rawConfig = yaml.load(content);
         return validateConfig(rawConfig, configPath);
-      } catch (error) {
+      } catch {
         // Ignore config file errors and try next location
       }
     }
@@ -68,7 +81,7 @@ function formatAsText(data: unknown): string {
 
     // For arrays, create a cleaner table-like format with colors
     return data
-      .map((item, index) => {
+      .map((item: unknown, index) => {
         if (typeof item === "object" && item !== null) {
           const formatted = formatAsText(item);
           const separator = chalk.blue("=".repeat(50));
@@ -82,8 +95,8 @@ function formatAsText(data: unknown): string {
 
   if (typeof data === "object" && data !== null) {
     // Handle DateTime objects from Luxon
-    if ("toISO" in data && typeof data.toISO === "function") {
-      return (data as any).toISO();
+    if (hasToISOMethod(data)) {
+      return data.toISO();
     }
 
     // Handle Date objects
@@ -102,8 +115,8 @@ function formatAsText(data: unknown): string {
 
         if (typeof value === "object" && value !== null) {
           // Handle DateTime/Date objects inline
-          if ("toISO" in value && typeof (value as any).toISO === "function") {
-            return `${chalk.bold.green(formattedKey)}: ${chalk.magenta((value as any).toISO())}`;
+          if (hasToISOMethod(value)) {
+            return `${chalk.bold.green(formattedKey)}: ${chalk.magenta(value.toISO())}`;
           }
           if (value instanceof Date) {
             return `${chalk.bold.green(formattedKey)}: ${chalk.magenta(value.toISOString())}`;

@@ -34,7 +34,7 @@ describe("links e2e test", () => {
       expect(response).toBeDefined();
       expect(response.length).toBe(2);
       response.forEach((link) =>
-        expectTypeOf(link).toEqualTypeOf<LinkInfoError>(),
+        expectTypeOf(link as LinkInfoError).toEqualTypeOf<LinkInfoError>(),
       );
     });
   });

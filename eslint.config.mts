@@ -5,6 +5,8 @@ import prettier from "eslint-config-prettier";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
+  // Ignore build artifacts and dependencies
+  { ignores: ["dist//**", "node_modules//**"] },
   {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
     plugins: { js },
