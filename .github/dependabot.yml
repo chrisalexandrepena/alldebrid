@@ -17,7 +17,7 @@ updates:
       include: "scope"
     groups:
       development-dependencies:
-        patterns: &devGroupPattern
+        patterns:
           - "@types/*"
           - "eslint*"
           - "typescript"
@@ -29,7 +29,12 @@ updates:
       production-dependencies:
         patterns:
           - "*"
-        exclude-patterns: *devGroupPattern
+        exclude-patterns:
+          - "@types/*"
+          - "eslint*"
+          - "typescript"
+          - "tsup"
+          - "vitest"
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: "github-actions"

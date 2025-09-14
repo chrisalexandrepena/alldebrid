@@ -76,8 +76,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -114,6 +112,7 @@ jobs:
         uses: EndBug/version-check@v2
         with:
           file-name: ./package.json
+          file-url: https://unpkg.com/alldebrid@latest/package.json
           static-checking: localIsNew
 
       - name: Determine version bump
