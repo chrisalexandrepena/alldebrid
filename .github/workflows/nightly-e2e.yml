@@ -18,8 +18,6 @@ jobs:
     name: Run E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Skip if the API key secret is not configured
-    if: ${{ secrets.ALLDEBRID_API_KEY != '' }}
 
     steps:
       - name: Checkout code
@@ -27,6 +25,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
