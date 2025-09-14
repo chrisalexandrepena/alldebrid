@@ -21,6 +21,11 @@ const ClientOptionsSchema = z.object({
     .optional(),
   timeout: z.number().positive().optional(),
   retries: z.number().int().min(0).optional(),
+  // Security hardening: cap payload sizes to mitigate DoS via large bodies
+  maxContentLengthBytes: z.number().int().positive().optional(),
+  maxBodyLengthBytes: z.number().int().positive().optional(),
+  // Cap redirects to avoid loops or redirect storms
+  maxRedirects: z.number().int().min(0).optional(),
 });
 export type ClientOptions = z.infer<typeof ClientOptionsSchema>;
 
@@ -71,6 +76,9 @@ export class AlldebridHttpClient {
   private apiKey?: string;
   private timeout: number = 30000;
   private retries: number = 3;
+  private maxContentLengthBytes: number = 5 * 1024 * 1024; // 5 MiB
+  private maxBodyLengthBytes: number = 5 * 1024 * 1024; // 5 MiB
+  private maxRedirects: number = 5;
 
   private normalizePath(path: string): string {
     return z
@@ -118,6 +126,9 @@ export class AlldebridHttpClient {
     this.baseUrl = (parsed.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
     this.timeout = parsed.timeout ?? 3000;
     this.retries = parsed.retries ?? 3;
+    this.maxContentLengthBytes = parsed.maxContentLengthBytes ?? this.maxContentLengthBytes;
+    this.maxBodyLengthBytes = parsed.maxBodyLengthBytes ?? this.maxBodyLengthBytes;
+    this.maxRedirects = parsed.maxRedirects ?? this.maxRedirects;
   }
 
   private async executeRequest<T extends z.ZodType>(
@@ -130,6 +141,12 @@ export class AlldebridHttpClient {
       const { data: json } = await axios.request<unknown>({
         ...config,
         timeout: this.timeout,
+        // Security hardening against large payload DoS
+        maxContentLength: this.maxContentLengthBytes,
+        maxBodyLength: this.maxBodyLengthBytes,
+        maxRedirects: this.maxRedirects,
+        responseType: "json",
+        decompress: true,
       });
       logger.debug({ json }, "alldebrid http raw response");
       const result = parseEnvelope(json, dataSchema);
