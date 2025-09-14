@@ -15,12 +15,12 @@ Configuration values are resolved in the following order (highest to lowest prio
 ### Global Options
 
 ```bash
-alldebrid --api-key "your-key" user info          # API key flag
+alldebrid --apikey "your-key" user info          # API key flag
 alldebrid --format json user info                 # Output format flag
 ```
 
 Available global flags:
-- `-k, --api-key <key>` - Your AllDebrid API key
+- `-k, --apikey <key>` - Your AllDebrid API key
 - `-f, --format <format>` - Output format: `text`, `json`, or `yaml`
 - `--help` - Show help information
 - `--version` - Show version number
@@ -175,10 +175,10 @@ You can use different configuration files for different environments:
 
 ```bash
 # Development
-alldebrid --api-key "$DEV_API_KEY" user info
+alldebrid --apikey "$DEV_API_KEY" user info
 
 # Production  
-alldebrid --api-key "$PROD_API_KEY" user info
+alldebrid --apikey "$PROD_API_KEY" user info
 ```
 
 ## Troubleshooting
@@ -187,7 +187,7 @@ alldebrid --api-key "$PROD_API_KEY" user info
 
 This means no API key was found. Check in order:
 
-1. **CLI flag**: Did you pass `--api-key`?
+1. **CLI flag**: Did you pass `--apikey`?
 2. **Environment**: Is `ALLDEBRID_API_KEY` set?
 3. **Config file**: Does your config file exist and contain the key?
 
