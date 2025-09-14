@@ -8,6 +8,8 @@ on:
     branches: [main, next]
     paths-ignore:
       - '.github/**'
+      - 'docs/**'
+      - '*.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
