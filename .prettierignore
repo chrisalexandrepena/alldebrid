@@ -1,0 +1,11 @@
+# build artifacts
+dist
+coverage
+
+# package managers
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# misc
+node_modules

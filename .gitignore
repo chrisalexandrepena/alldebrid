@@ -1,5 +1,18 @@
-lib/
+# deps & builds
 node_modules/
-.idea/
+dist/
+coverage/
+.vitest/
+.tmp/
 
-*.mytests.ts
+# logs & cache
+*.log
+npm-debug.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# OS/IDE
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json

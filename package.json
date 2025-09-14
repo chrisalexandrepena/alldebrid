@@ -1,48 +1,78 @@
 {
   "name": "alldebrid",
-  "version": "1.2.2",
-  "description": "Alldebrid ci",
-  "repository": "git://github.com:chrisalexandrepena/alldebrid.git",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "lint": "tslint -p tsconfig.json",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run lint",
-    "preversion": "npm run lint",
-    "version": "npm run format && git add -A src",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postversion": "git push && git push --tags"
-  },
-  "bin": {
-    "alldebrid": "lib/bin/index.js"
-  },
-  "keywords": [
-    "alldebrid"
-  ],
-  "files": [
-    "lib/**/*"
-  ],
+  "type": "module",
+  "version": "2.0.0",
   "author": "Chris-Alexandre Pena",
-  "license": "ISC",
-  "devDependencies": {
-    "@types/command-line-args": "^5.0.0",
-    "@types/command-line-usage": "^5.0.1",
-    "@types/node": "^13.9.5",
-    "@types/request": "^2.48.4",
-    "@types/request-promise-native": "^1.0.17",
-    "command-line-usage": "^6.1.0",
-    "prettier": "^2.0.2",
-    "tslint": "^6.1.0",
-    "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.8.3"
+  "licence": "GPL-3.0",
+  "description": "AllDebrid SDK + CLI in TypeScript",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "alldebrid": "./dist/cli/index.cjs"
+  },
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "vitest run test/unit",
+    "test:e2e": "vitest run test/e2e",
+    "prepublishOnly": "pnpm build && pnpm test && pnpm test:e2e"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "volta": {
+    "node": "22.18.0"
   },
   "dependencies": {
-    "command-line-args": "^5.1.1",
-    "moment": "^2.24.0",
-    "request": "^2.88.2",
-    "request-promise-native": "^1.0.8"
+    "axios": "^1.12.1",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.1",
+    "js-yaml": "^4.1.0",
+    "luxon": "^3.7.1",
+    "pino": "^9.9.0",
+    "pino-pretty": "^13.1.1",
+    "zod": "^4.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^24.3.0",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.3.0",
+    "jiti": "^2.5.1",
+    "prettier": "^3.6.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.41.0",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [],
+  "packageManager": "pnpm@10.15.0",
+  "pnpm": {
+    "overrides": {
+      "axios": "^1.12.0"
+    }
   }
 }

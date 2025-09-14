@@ -1,0 +1,94 @@
+name: Auto-merge Dependabot PRs
+# This workflow auto-approves and merges Dependabot PRs when safe:
+# - Only runs when the PR author is dependabot[bot]
+# - Uses dependabot/fetch-metadata to gate on:
+#   - semver-patch or semver-minor updates, OR
+#   - development dependency updates
+# - Waits for all checks to complete successfully (with a 20m timeout)
+# - Fails fast on failed/cancelled/timed_out/action_required checks
+# - Performs a squash merge with the default GITHUB_TOKEN
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for checks to succeed (max 20m)
+        if: |
+          contains(steps.meta.outputs.update-type, 'semver-patch') ||
+          contains(steps.meta.outputs.update-type, 'semver-minor') ||
+          contains(steps.meta.outputs.dependency-type, 'development')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.pull_request.head.sha;
+
+            const deadline = Date.now() + 20 * 60 * 1000; // 20 minutes
+            async function getChecks() {
+              const { data } = await github.rest.checks.listForRef({ owner, repo, ref: sha });
+              return data.check_runs || [];
+            }
+
+            while (true) {
+              const checks = await getChecks();
+              const hasAny = checks.length > 0;
+              const pending = checks.filter(c => ['queued', 'in_progress'].includes(c.status));
+              const failed = checks.filter(c => ['failure', 'cancelled', 'timed_out', 'action_required'].includes(c.conclusion || ''));
+
+              if (failed.length) throw new Error('Some checks failed - not auto-merging');
+              if (hasAny && pending.length === 0) break;
+
+              if (Date.now() > deadline) throw new Error('Timed out waiting for checks');
+              await new Promise(r => setTimeout(r, 30000));
+            }
+
+      - name: Approve PR
+        if: |
+          contains(steps.meta.outputs.update-type, 'semver-patch') ||
+          contains(steps.meta.outputs.update-type, 'semver-minor') ||
+          contains(steps.meta.outputs.dependency-type, 'development')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              event: 'APPROVE',
+              body: '🤖 Auto-approved by GitHub Actions - Dependabot dependency update'
+            });
+
+      - name: Merge PR (squash)
+        if: |
+          contains(steps.meta.outputs.update-type, 'semver-patch') ||
+          contains(steps.meta.outputs.update-type, 'semver-minor') ||
+          contains(steps.meta.outputs.dependency-type, 'development')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: 'squash'
+            });

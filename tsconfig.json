@@ -1,27 +1,20 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "allowJs": true,
-    "skipLibCheck": true,
-    "moduleResolution": "node",
-    "pretty": true,
-    "declaration": true,
-    "sourceMap": true,
-    "noImplicitAny": false,
-    "noUnusedLocals": false,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
     "esModuleInterop": true,
-    "target": "es5",
-    "outDir": "./lib",
-    "baseUrl": "./src",
-    "lib": ["ES6", "dom"],
-    "strictNullChecks": true,
-    "types": ["node"]
+    "skipLibCheck": true,
+    "target": "es2022",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "module": "preserve",
+    "noEmit": true,
+    "lib": ["es2022", "dom", "dom.iterable"]
   },
-  "compileOnSave": true,
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "src/**/*.spec.ts", "src/**/*.test.ts", "src/**/*.step.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vitest.config.ts"],
+  "exclude": ["node_modules", "**/test"]
 }
