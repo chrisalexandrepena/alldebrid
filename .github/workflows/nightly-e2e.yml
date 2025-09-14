@@ -39,13 +39,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build
-        run: pnpm build
-
       - name: Run E2E tests
         run: pnpm test:e2e
-        env:
-          ALLDEBRID_API_KEY: ${{ secrets.ALLDEBRID_API_KEY }}
 
       - name: Create issue on failure
         if: failure()
