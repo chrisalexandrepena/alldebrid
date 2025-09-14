@@ -36,7 +36,7 @@ jobs:
         if: |
           contains(steps.meta.outputs.update-type, 'semver-patch') ||
           contains(steps.meta.outputs.dependency-type, 'development')
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -81,7 +81,7 @@ jobs:
         if: |
           contains(steps.meta.outputs.update-type, 'semver-patch') ||
           contains(steps.meta.outputs.dependency-type, 'development')
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.pulls.createReview({
@@ -96,7 +96,7 @@ jobs:
         if: |
           contains(steps.meta.outputs.update-type, 'semver-patch') ||
           contains(steps.meta.outputs.dependency-type, 'development')
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.pulls.merge({
