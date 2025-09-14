@@ -35,7 +35,6 @@ jobs:
       - name: Wait for checks to succeed (max 20m)
         if: |
           contains(steps.meta.outputs.update-type, 'semver-patch') ||
-          contains(steps.meta.outputs.update-type, 'semver-minor') ||
           contains(steps.meta.outputs.dependency-type, 'development')
         uses: actions/github-script@v7
         with:
@@ -65,7 +64,6 @@ jobs:
       - name: Approve PR
         if: |
           contains(steps.meta.outputs.update-type, 'semver-patch') ||
-          contains(steps.meta.outputs.update-type, 'semver-minor') ||
           contains(steps.meta.outputs.dependency-type, 'development')
         uses: actions/github-script@v7
         with:
@@ -81,7 +79,6 @@ jobs:
       - name: Merge PR (squash)
         if: |
           contains(steps.meta.outputs.update-type, 'semver-patch') ||
-          contains(steps.meta.outputs.update-type, 'semver-minor') ||
           contains(steps.meta.outputs.dependency-type, 'development')
         uses: actions/github-script@v7
         with:
