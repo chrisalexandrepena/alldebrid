@@ -13,6 +13,7 @@ import {
   validateOutputFormat,
   validateMagnetStatus,
 } from "./validation";
+import { version } from "../../package.json";
 
 function loadConfig(): CliConfig {
   // Config file locations in order of preference
@@ -198,7 +199,7 @@ async function main() {
   program
     .name("alldebrid")
     .description("AllDebrid CLI - Command line interface for AllDebrid")
-    .version("2.0.0")
+    .version(version)
     .option("-f, --format <format>", "Output format (text|json|yaml)")
     .option("-k, --apikey <key>", "AllDebrid API key");
 

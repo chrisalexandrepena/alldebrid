@@ -108,6 +108,10 @@ export class AlldebridHttpClient {
     };
   }
 
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   configure(opts: ClientOptions) {
     const parsed = ClientOptionsSchema.parse(opts);
     this.apiKey = parsed.apiKey;
@@ -150,10 +154,6 @@ export class AlldebridHttpClient {
 
       throw networkError;
     }
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async getRequest<T extends z.ZodType>(
