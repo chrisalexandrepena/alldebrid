@@ -1,0 +1,21 @@
+name: Workflow Lint
+
+on:
+  pull_request:
+    paths:
+      - '.github/**'
+  push:
+    branches: [main, next]
+    paths:
+      - '.github/**'
+
+jobs:
+  actionlint:
+    name: Lint GitHub Workflows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run actionlint
+        uses: rhysd/actionlint@v1
