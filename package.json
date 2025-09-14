@@ -3,7 +3,7 @@
   "type": "module",
   "version": "2.0.0",
   "author": "Chris-Alexandre Pena",
-  "licence": "GPL-3.0",
+  "license": "GPL-3.0",
   "description": "AllDebrid SDK + CLI in TypeScript",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -32,6 +32,14 @@
     },
     "./package.json": "./package.json"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrisalexandrepena/alldebrid"
+  },
+  "bugs": {
+    "url": "https://github.com/chrisalexandrepena/alldebrid/issues"
+  },
+  "homepage": "https://github.com/chrisalexandrepena/alldebrid#readme",
   "files": [
     "dist",
     "README.md",
