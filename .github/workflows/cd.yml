@@ -109,6 +109,13 @@ jobs:
         env:
           ALLDEBRID_API_KEY: ${{ secrets.ALLDEBRID_API_KEY }}
 
+      - name: Validate current version (manual releases only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: EndBug/version-check@v2
+        with:
+          file-name: ./package.json
+          static-checking: localIsNew
+
       - name: Determine version bump
         id: version
         run: |

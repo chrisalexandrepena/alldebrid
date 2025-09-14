@@ -106,6 +106,21 @@ jobs:
 
           echo "✅ Package validation successful"
 
+  version-check:
+    name: Version Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check version increment
+        uses: EndBug/version-check@v2
+        with:
+          file-name: ./package.json
+          static-checking: localIsNew
+
   security-check:
     name: Security Check
     runs-on: ubuntu-latest
