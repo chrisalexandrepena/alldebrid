@@ -1,7 +1,7 @@
 {
   "name": "alldebrid",
   "type": "module",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "author": "Chris-Alexandre Pena",
   "license": "GPL-3.0",
   "description": "AllDebrid SDK + CLI in TypeScript",
