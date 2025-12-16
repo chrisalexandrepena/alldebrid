@@ -197,7 +197,7 @@ jobs:
       - name: Publish to npm
         if: github.event.inputs.dry_run != 'true'
         run: |
-          echo "GitHub context:"
+          echo "GitHub context :"
           echo "  repo:        ${{ github.repository }}"
           echo "  ref:         ${{ github.ref }}"
           echo "  workflow:    ${{ github.workflow }}"
