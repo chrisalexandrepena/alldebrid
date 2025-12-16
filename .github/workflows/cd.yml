@@ -68,6 +68,9 @@ jobs:
     needs: check-changes
     if: needs.check-changes.outputs.should_release == 'true'
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
     
     steps:
       - name: Checkout code
@@ -84,7 +87,6 @@ jobs:
         with:
           node-version: 20
           cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Configure Git
         run: |
@@ -196,10 +198,7 @@ jobs:
         if: github.event.inputs.dry_run != 'true'
         run: |
           echo "🚀 Publishing to npm with provenance..."
-          pnpm publish --access public --no-git-checks --ignore-scripts
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+          npm publish --provenance --access public
 
       - name: Push changes (manual only)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true'
