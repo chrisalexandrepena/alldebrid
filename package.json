@@ -6,10 +6,10 @@
   "license": "GPL-3.0",
   "description": "AllDebrid SDK + CLI in TypeScript",
   "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "alldebrid": "./dist/cli/index.cjs"
+    "alldebrid": "dist/cli/index.cjs"
   },
   "scripts": {
     "dev": "tsup --watch",
@@ -26,15 +26,15 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.cjs",
-      "default": "./dist/index.mjs"
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/chrisalexandrepena/alldebrid"
+    "url": "git+https://github.com/chrisalexandrepena/alldebrid.git"
   },
   "bugs": {
     "url": "https://github.com/chrisalexandrepena/alldebrid/issues"
@@ -43,7 +43,7 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENCE"
   ],
   "engines": {
     "node": ">=18"
