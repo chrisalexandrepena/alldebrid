@@ -199,8 +199,30 @@ jobs:
           echo "📦 Package contents:"
           tar -tzf alldebrid-*.tgz | head -20
 
+      - name: Determine publish version and check npm
+        id: publish_meta
+        run: |
+          PKG_NAME="$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).name")"
+          if [[ "${GITHUB_REF:-}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")"
+          fi
+
+          if npm view "${PKG_NAME}@${VERSION}" version --silent >/dev/null 2>&1; then
+            SHOULD_PUBLISH=false
+            echo "ℹ️ ${PKG_NAME}@${VERSION} already exists on npm; skipping publish."
+          else
+            SHOULD_PUBLISH=true
+            echo "✅ ${PKG_NAME}@${VERSION} not found on npm; will publish."
+          fi
+
+          echo "name=${PKG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "should_publish=${SHOULD_PUBLISH}" >> "$GITHUB_OUTPUT"
+
       - name: Publish to npm
-        if: github.event.inputs.dry_run != 'true'
+        if: (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') && steps.publish_meta.outputs.should_publish == 'true'
         run: |
           echo "🚀 Publishing to npm with provenance..."
           npm publish --provenance --access public --no-git-checks --ignore-scripts
@@ -250,11 +272,11 @@ jobs:
           prerelease: false
 
       - name: Post-release cleanup
-        if: github.event.inputs.dry_run != 'true'
+        if: (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true')
         run: |
-          echo "✅ Release v${{ steps.bump.outputs.new_version }} completed successfully!"
-          echo "📦 NPM: https://www.npmjs.com/package/alldebrid/v/${{ steps.bump.outputs.new_version }}"
-          echo "🏷️ GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.bump.outputs.new_version }}"
+          echo "✅ Release v${{ steps.publish_meta.outputs.version }} completed successfully!"
+          echo "📦 NPM: https://www.npmjs.com/package/${{ steps.publish_meta.outputs.name }}/v/${{ steps.publish_meta.outputs.version }}"
+          echo "🏷️ GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.publish_meta.outputs.version }}"
 
       - name: Dry run summary
         if: github.event.inputs.dry_run == 'true'
