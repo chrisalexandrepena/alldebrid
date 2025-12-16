@@ -210,30 +210,42 @@ jobs:
         run: |
           git push origin main
 
+      - name: Release metadata (tag pushes only)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        id: release_meta
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PREV_TAG="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          if [[ -n "$PREV_TAG" ]]; then
+            COMPARE_URL="https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${GITHUB_REF_NAME}"
+          else
+            COMPARE_URL="https://github.com/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "compare_url=$COMPARE_URL" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release (tag pushes only)
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && github.event.inputs.dry_run != 'true'
-        uses: actions/create-release@v1
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           body: |
             ## Changes in ${{ github.ref_name }}
-            
-            This release was automatically generated from the main branch.
-            
+
             ### Installation
             ```bash
-            npm install -g alldebrid@${{ github.ref_name }}
+            npm install -g alldebrid@${{ steps.release_meta.outputs.version }}
             # or for local SDK usage
-            npm install alldebrid@${{ github.ref_name }}
+            npm install alldebrid@${{ steps.release_meta.outputs.version }}
             ```
-            
+
             ### What's Changed
             See the [changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed changes.
-            
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.bump.outputs.current_version }}...v${{ steps.bump.outputs.new_version }}
+
+            **Full Changelog**: ${{ steps.release_meta.outputs.compare_url }}
           draft: false
           prerelease: false
 
