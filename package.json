@@ -62,13 +62,13 @@
     "zod": "^4.1.8"
   },
   "devDependencies": {
-    "@eslint/js": "^9.35.0",
+    "@eslint/js": "^10.0.1",
     "@types/js-yaml": "^4.0.9",
     "@types/luxon": "^3.7.1",
     "@types/node": "^25.0.1",
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^16.4.0",
+    "globals": "^17.3.0",
     "jiti": "^2.5.1",
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
