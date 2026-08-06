@@ -6,7 +6,8 @@ export const LinkInfoSuccessSchema = z.object({
   filename: z.string(),
   size: z.int(),
   host: z.string(),
-  hostDomain: z.string(),
+  // AllDebrid omits this on some links, so never require it.
+  hostDomain: z.string().optional(),
 });
 export type LinkInfoSuccess = z.infer<typeof LinkInfoSuccessSchema>;
 export const LinkInfoErrorSchema = z.object({
@@ -43,7 +44,8 @@ export const DebridLinkResponseSchema = z.object({
   paws: z.boolean().optional(),
   filesize: z.int(),
   id: z.string(),
-  hostDomain: z.string(),
+  // AllDebrid omits this on some links, so never require it.
+  hostDomain: z.string().optional(),
   delayed: z.int().optional(),
 });
 export type DebridLinkResponse = z.infer<typeof DebridLinkResponseSchema>;
